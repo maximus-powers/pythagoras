@@ -1,65 +1,147 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { Header } from "@/components/layout/header";
+import { BottomNav } from "@/components/layout/bottom-nav";
+import { CommandGrid } from "@/components/command/command-grid";
+import { MarkingPanel } from "@/components/marking/marking-panel";
+import { QuickSettings } from "@/components/settings/quick-settings";
+import { Button } from "@/components/ui/button";
+import { SequenceDisplayInline } from "@/components/ui/sequence-display";
+import { useAppStore } from "@/lib/store";
+import { useSoundEngine } from "@/hooks/use-sound-engine";
+import { generateId } from "@/lib/utils";
+import type { Command } from "@/lib/db/schema";
+
+export default function CommandBoard() {
+  const [commands, setCommands] = useState<Command[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { isMarking, startMarking, trackingEnabled } = useAppStore();
+  const { playSequence } = useSoundEngine();
+
+  // Separate marks from other commands
+  const { marks, otherCommands } = useMemo(() => {
+    const marks = commands.filter((c) => c.parentFamily === "Marks");
+    const otherCommands = commands.filter((c) => c.parentFamily !== "Marks");
+    return { marks, otherCommands };
+  }, [commands]);
+
+  const positiveMarks = marks.filter((m) => m.family === "Positive").sort((a, b) => a.sequence.localeCompare(b.sequence));
+  const negativeMarks = marks.filter((m) => m.family === "Negative").sort((a, b) => a.sequence.localeCompare(b.sequence));
+
+  useEffect(() => {
+    async function fetchCommands() {
+      try {
+        const response = await fetch("/api/commands");
+        if (response.ok) {
+          const data = await response.json();
+          setCommands(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch commands:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchCommands();
+  }, []);
+
+  const handleCommandClick = useCallback(async (command: Command) => {
+    // Play the command sound
+    await playSequence(command.sequence);
+    
+    // Only start marking flow if tracking is enabled
+    if (trackingEnabled) {
+      const callId = generateId();
+      startMarking(command, callId);
+    }
+  }, [startMarking, playSequence, trackingEnabled]);
+
+  const handleMarkClick = useCallback(async (command: Command) => {
+    // Just play the sound for marks, no marking flow
+    await playSequence(command.sequence);
+  }, [playSequence]);
+
+  const handleMarkingComplete = useCallback(() => {
+    // Marking panel handles its own state, this is just for any additional cleanup
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <div className="min-h-screen pb-20">
+      <Header 
+        showSettingsToggle 
+        isSettingsOpen={isSettingsOpen}
+        onSettingsToggle={() => setIsSettingsOpen(!isSettingsOpen)}
+      />
+      
+      <div className="max-w-lg mx-auto">
+        <QuickSettings isOpen={isSettingsOpen} />
+      </div>
+      
+      <main className="p-4 max-w-lg mx-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-muted-foreground">Loading commands...</div>
+          </div>
+        ) : commands.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-center">
+            <p className="text-muted-foreground mb-2">No commands found</p>
+            <p className="text-sm text-muted-foreground">
+              Add commands in the Vocabulary section or run the seed script.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Marks at the top - side by side */}
+            {marks.length > 0 && (
+              <div className="mb-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {positiveMarks.map((mark) => (
+                    <Button
+                      key={mark.id}
+                      className="h-16 bg-green-600 hover:bg-green-700 flex flex-col gap-1"
+                      onClick={() => handleMarkClick(mark)}
+                      disabled={isMarking}
+                    >
+                      <ThumbsUp className="h-6 w-6 text-white" />
+                      <SequenceDisplayInline sequence={mark.sequence} color="white" />
+                    </Button>
+                  ))}
+                  {negativeMarks.map((mark) => (
+                    <Button
+                      key={mark.id}
+                      variant="destructive"
+                      className="h-16 bg-red-600 hover:bg-red-700 flex flex-col gap-1"
+                      onClick={() => handleMarkClick(mark)}
+                      disabled={isMarking}
+                    >
+                      <ThumbsDown className="h-6 w-6 text-white" />
+                      <SequenceDisplayInline sequence={mark.sequence} color="white" />
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Other commands in accordion */}
+            <CommandGrid
+              commands={otherCommands}
+              onCommandClick={handleCommandClick}
+              disabled={isMarking}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+          </>
+        )}
       </main>
+
+      <BottomNav />
+
+      {/* Marking overlay */}
+      {isMarking && (
+        <MarkingPanel onComplete={handleMarkingComplete} />
+      )}
     </div>
   );
 }
