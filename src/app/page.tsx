@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { ThumbsUp, ThumbsDown, Volume2 } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Volume2, Bug } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { CommandGrid } from "@/components/command/command-grid";
@@ -18,8 +18,14 @@ export default function CommandBoard() {
   const [commands, setCommands] = useState<Command[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+  const [showDebug, setShowDebug] = useState(false);
   const { isMarking, startMarking, trackingEnabled } = useAppStore();
   const { playSequence, isAudioReady, isMuted } = useSoundEngine();
+
+  const log = useCallback((msg: string) => {
+    setDebugLog(prev => [...prev.slice(-9), `${new Date().toLocaleTimeString()}: ${msg}`]);
+  }, []);
 
   // Separate marks from other commands
   const { marks, otherCommands } = useMemo(() => {
@@ -50,27 +56,39 @@ export default function CommandBoard() {
   }, []);
 
   const handleCommandClick = useCallback(async (command: Command) => {
-    // Play the command sound
-    await playSequence(command.sequence);
-    
-    // Increment exposure count for training communication tracking
-    fetch("/api/commands/exposure", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ commandId: command.id }),
-    }).catch(console.error);
-    
-    // Only start marking flow if tracking is enabled
-    if (trackingEnabled) {
-      const callId = generateId();
-      startMarking(command, callId);
+    log(`Tap: ${command.word}`);
+    try {
+      // Play the command sound
+      await playSequence(command.sequence);
+      log(`Played: ${command.sequence}`);
+      
+      // Increment exposure count for training communication tracking
+      fetch("/api/commands/exposure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commandId: command.id }),
+      }).catch(console.error);
+      
+      // Only start marking flow if tracking is enabled
+      if (trackingEnabled) {
+        const callId = generateId();
+        startMarking(command, callId);
+      }
+    } catch (err) {
+      log(`Error: ${err}`);
     }
-  }, [startMarking, playSequence, trackingEnabled]);
+  }, [startMarking, playSequence, trackingEnabled, log]);
 
   const handleMarkClick = useCallback(async (command: Command) => {
-    // Just play the sound for marks, no marking flow
-    await playSequence(command.sequence);
-  }, [playSequence]);
+    log(`Mark tap: ${command.word}`);
+    try {
+      // Just play the sound for marks, no marking flow
+      await playSequence(command.sequence);
+      log(`Played mark: ${command.sequence}`);
+    } catch (err) {
+      log(`Mark error: ${err}`);
+    }
+  }, [playSequence, log]);
 
   const handleMarkingComplete = useCallback(() => {
     // Marking panel handles its own state, this is just for any additional cleanup
@@ -152,6 +170,31 @@ export default function CommandBoard() {
       </main>
 
       <BottomNav />
+
+      {/* Debug toggle */}
+      <button
+        onClick={() => setShowDebug(!showDebug)}
+        className="fixed bottom-24 right-4 z-50 p-2 bg-purple-600 rounded-full shadow-lg"
+      >
+        <Bug className="h-5 w-5 text-white" />
+      </button>
+
+      {/* Debug panel */}
+      {showDebug && (
+        <div className="fixed bottom-32 right-4 left-4 z-50 p-3 bg-black/90 border border-purple-500 rounded-lg text-xs font-mono text-green-400 max-h-48 overflow-auto">
+          <div className="mb-2 text-purple-400">Debug Log (v3):</div>
+          <div>Audio ready: {isAudioReady ? "yes" : "no"}</div>
+          <div>Muted: {isMuted ? "yes" : "no"}</div>
+          <div>Commands loaded: {commands.length}</div>
+          <div className="mt-2 border-t border-purple-500/50 pt-2">
+            {debugLog.length === 0 ? (
+              <div className="text-gray-500">No events yet - tap a button</div>
+            ) : (
+              debugLog.map((line, i) => <div key={i}>{line}</div>)
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Marking overlay */}
       {isMarking && (
