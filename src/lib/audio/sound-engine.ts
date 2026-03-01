@@ -26,177 +26,66 @@ const GAP_MULTIPLIER: Record<SoundType, number> = {
   tss: 1,
 };
 
-// Tone.js types (loaded dynamically)
-type ToneType = typeof import("tone");
-type Synth = InstanceType<ToneType["Synth"]>;
-type MonoSynth = InstanceType<ToneType["MonoSynth"]>;
-type NoiseSynth = InstanceType<ToneType["NoiseSynth"]>;
-type Filter = InstanceType<ToneType["Filter"]>;
-type Vibrato = InstanceType<ToneType["Vibrato"]>;
-
 export class SoundEngine {
   private config: SoundConfig;
   private isPlaying = false;
   private abortController: AbortController | null = null;
-  
-  // Tone.js module and instruments (loaded dynamically)
-  private Tone: ToneType | null = null;
-  private beepSynth: Synth | null = null;
-  private whistleSynth: Synth | null = null;
-  private whistleVibrato: Vibrato | null = null;
-  private growlSynth: MonoSynth | null = null;
-  private noiseSynth: NoiseSynth | null = null;
-  private noiseFilter: Filter | null = null;
-  private initialized = false;
-  private unlockListenerAttached = false;
-  private audioUnlocked = false;
+  private audioContext: AudioContext | null = null;
+  private unlocked = false;
 
   constructor(config: SoundConfig = DEFAULT_CONFIG) {
     this.config = config;
   }
 
   /**
-   * Attach unlock listeners for iOS/Safari audio context
-   * Must be called on client-side only
+   * Get or create AudioContext, resuming if suspended
    */
-  attachUnlockListeners(): void {
-    if (this.unlockListenerAttached || typeof window === "undefined") return;
+  private async getContext(): Promise<AudioContext> {
+    if (!this.audioContext) {
+      // Use webkitAudioContext for older iOS Safari
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      this.audioContext = new AudioContextClass();
+    }
     
-    const unlockAudio = async () => {
-      if (this.audioUnlocked) return;
-      
+    // Always try to resume (required on iOS after suspend)
+    if (this.audioContext.state === "suspended") {
       try {
-        // Load Tone.js if not loaded
-        if (!this.Tone) {
-          this.Tone = await import("tone");
-        }
-        
-        // Start the audio context - this MUST happen in a user gesture handler
-        await this.Tone.start();
-        
-        // Play a silent sound to fully unlock on iOS
-        const ctx = this.Tone.getContext();
-        if (ctx.rawContext && ctx.rawContext.state === "suspended") {
-          await ctx.rawContext.resume();
-        }
-        
-        this.audioUnlocked = true;
-        console.log("Audio unlocked, context state:", this.Tone.getContext().state);
-        
-        // Remove listeners after successful unlock
-        document.removeEventListener("touchstart", unlockAudio, true);
-        document.removeEventListener("touchend", unlockAudio, true);
-        document.removeEventListener("click", unlockAudio, true);
-      } catch (err) {
-        console.warn("Audio unlock attempt failed:", err);
+        await this.audioContext.resume();
+      } catch (e) {
+        console.warn("Failed to resume audio context:", e);
       }
-    };
+    }
     
-    // Use capture phase to catch events before they're handled
-    document.addEventListener("touchstart", unlockAudio, true);
-    document.addEventListener("touchend", unlockAudio, true);
-    document.addEventListener("click", unlockAudio, true);
-    this.unlockListenerAttached = true;
-    console.log("Audio unlock listeners attached");
+    return this.audioContext;
   }
 
   /**
-   * Check if audio is ready to play
+   * Unlock audio on iOS - call from user gesture
    */
+  async unlock(): Promise<boolean> {
+    if (this.unlocked) return true;
+    
+    try {
+      const ctx = await this.getContext();
+      
+      // Play a silent buffer to unlock
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+      
+      this.unlocked = true;
+      console.log("Audio unlocked, context state:", ctx.state);
+      return true;
+    } catch (e) {
+      console.warn("Audio unlock failed:", e);
+      return false;
+    }
+  }
+
   isReady(): boolean {
-    return this.audioUnlocked && this.initialized;
-  }
-
-  /**
-   * Initialize Tone.js instruments (must be called after user interaction)
-   */
-  private async ensureInitialized(): Promise<void> {
-    if (this.initialized && this.Tone) {
-      // Always try to resume in case context was suspended (iOS background)
-      const ctx = this.Tone.getContext();
-      if (ctx.rawContext && ctx.rawContext.state === "suspended") {
-        console.log("Resuming suspended audio context...");
-        await ctx.rawContext.resume();
-      }
-      await this.Tone.start();
-      return;
-    }
-
-    // Dynamically import Tone.js (client-side only)
-    const Tone = await import("tone");
-    this.Tone = Tone;
-    
-    // Resume if suspended (iOS)
-    const ctx = Tone.getContext();
-    if (ctx.rawContext && ctx.rawContext.state === "suspended") {
-      console.log("Resuming suspended audio context during init...");
-      await ctx.rawContext.resume();
-    }
-    
-    await Tone.start();
-    this.audioUnlocked = true;
-    console.log("Tone.js initialized, audio context state:", Tone.getContext().state);
-    
-    // Clean sine wave beep - classic clicker sound
-    this.beepSynth = new Tone.Synth({
-      oscillator: { type: "sine" },
-      envelope: {
-        attack: 0.005,
-        decay: 0.1,
-        sustain: 0.3,
-        release: 0.1,
-      },
-      volume: -6,
-    }).toDestination();
-
-    // Whistle - higher pitched with vibrato for realistic whistle
-    this.whistleVibrato = new Tone.Vibrato(5, 0.3).toDestination();
-    this.whistleSynth = new Tone.Synth({
-      oscillator: { type: "sine" },
-      envelope: {
-        attack: 0.05,
-        decay: 0.1,
-        sustain: 0.8,
-        release: 0.2,
-      },
-      volume: -6,
-    }).connect(this.whistleVibrato);
-
-    // Growl - deep, aggressive sawtooth with filter sweep
-    this.growlSynth = new Tone.MonoSynth({
-      oscillator: { type: "sawtooth" },
-      envelope: {
-        attack: 0.05,
-        decay: 0.2,
-        sustain: 0.6,
-        release: 0.3,
-      },
-      filterEnvelope: {
-        attack: 0.05,
-        decay: 0.3,
-        sustain: 0.4,
-        release: 0.3,
-        baseFrequency: 80,
-        octaves: 3,
-      },
-      volume: -3,
-    }).toDestination();
-
-    // Tss - white noise burst, like a cat hiss
-    this.noiseFilter = new Tone.Filter(4000, "highpass").toDestination();
-    this.noiseSynth = new Tone.NoiseSynth({
-      noise: { type: "white" },
-      envelope: {
-        attack: 0.01,
-        decay: 0.05,
-        sustain: 0.3,
-        release: 0.1,
-      },
-      volume: -10,
-    }).connect(this.noiseFilter);
-
-    this.initialized = true;
-    console.log("Sound engine initialized with Tone.js synthesizers");
+    return this.unlocked;
   }
 
   setConfig(config: Partial<SoundConfig>) {
@@ -213,16 +102,6 @@ export class SoundEngine {
       this.abortController = null;
     }
     this.isPlaying = false;
-    
-    // Stop all synths
-    try {
-      this.beepSynth?.triggerRelease();
-      this.whistleSynth?.triggerRelease();
-      this.growlSynth?.triggerRelease();
-      this.noiseSynth?.triggerRelease();
-    } catch {
-      // Ignore errors during cleanup
-    }
   }
 
   /**
@@ -247,14 +126,11 @@ export class SoundEngine {
       this.stop();
     }
 
-    await this.ensureInitialized();
-
     this.isPlaying = true;
     this.abortController = new AbortController();
     const { signal } = this.abortController;
 
     const tokens = this.parseSequence(sequence);
-    console.log("Playing sequence:", sequence, "tokens:", tokens, "soundType:", this.config.soundType);
 
     try {
       for (let i = 0; i < tokens.length; i++) {
@@ -263,7 +139,7 @@ export class SoundEngine {
         const token = tokens[i];
         
         if (token === "0") {
-          await this.playSilence(signal);
+          await this.delay(this.config.silenceDurationMs, signal);
         } else {
           const duration = token === "." ? this.config.shortDurationMs : this.config.longDurationMs;
           await this.playSound(duration, signal);
@@ -287,40 +163,117 @@ export class SoundEngine {
   private async playSound(durationMs: number, signal?: AbortSignal): Promise<void> {
     if (signal?.aborted) return;
 
-    const durationSec = durationMs / 1000;
-    const frequency = this.config.frequency;
+    try {
+      const ctx = await this.getContext();
+      const durationSec = durationMs / 1000;
+      const frequency = this.config.frequency;
+      const now = ctx.currentTime;
 
-    console.log("Playing sound:", this.config.soundType, "freq:", frequency, "duration:", durationMs);
+      const gainNode = ctx.createGain();
+      gainNode.connect(ctx.destination);
 
-    switch (this.config.soundType) {
-      case "beep":
-        this.beepSynth?.triggerAttackRelease(frequency, durationSec);
-        break;
-      
-      case "whistle":
-        // Whistle is higher pitched with triangle wave
-        this.whistleSynth?.triggerAttackRelease(frequency * 2.5, durationSec);
-        break;
-      
-      case "growl":
-        // Growl is lower pitched
-        this.growlSynth?.triggerAttackRelease(frequency / 4, durationSec);
-        break;
-      
-      case "tss":
-        this.noiseSynth?.triggerAttackRelease(durationSec);
-        break;
+      switch (this.config.soundType) {
+        case "beep": {
+          const osc = ctx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.value = frequency;
+          osc.connect(gainNode);
+          
+          // Quick attack, sustain, quick release
+          gainNode.gain.setValueAtTime(0, now);
+          gainNode.gain.linearRampToValueAtTime(0.5, now + 0.005);
+          gainNode.gain.setValueAtTime(0.5, now + durationSec - 0.01);
+          gainNode.gain.linearRampToValueAtTime(0, now + durationSec);
+          
+          osc.start(now);
+          osc.stop(now + durationSec);
+          break;
+        }
+        
+        case "whistle": {
+          const osc = ctx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.value = frequency * 2.5;
+          
+          // Add vibrato with LFO
+          const lfo = ctx.createOscillator();
+          const lfoGain = ctx.createGain();
+          lfo.frequency.value = 5;
+          lfoGain.gain.value = 30;
+          lfo.connect(lfoGain);
+          lfoGain.connect(osc.frequency);
+          
+          osc.connect(gainNode);
+          
+          gainNode.gain.setValueAtTime(0, now);
+          gainNode.gain.linearRampToValueAtTime(0.4, now + 0.05);
+          gainNode.gain.setValueAtTime(0.4, now + durationSec - 0.05);
+          gainNode.gain.linearRampToValueAtTime(0, now + durationSec);
+          
+          lfo.start(now);
+          osc.start(now);
+          osc.stop(now + durationSec);
+          lfo.stop(now + durationSec);
+          break;
+        }
+        
+        case "growl": {
+          const osc = ctx.createOscillator();
+          osc.type = "sawtooth";
+          osc.frequency.value = frequency / 4;
+          
+          const filter = ctx.createBiquadFilter();
+          filter.type = "lowpass";
+          filter.frequency.value = 400;
+          filter.Q.value = 5;
+          
+          osc.connect(filter);
+          filter.connect(gainNode);
+          
+          gainNode.gain.setValueAtTime(0, now);
+          gainNode.gain.linearRampToValueAtTime(0.6, now + 0.05);
+          gainNode.gain.setValueAtTime(0.6, now + durationSec - 0.1);
+          gainNode.gain.linearRampToValueAtTime(0, now + durationSec);
+          
+          osc.start(now);
+          osc.stop(now + durationSec);
+          break;
+        }
+        
+        case "tss": {
+          // Create white noise for tss sound
+          const bufferSize = ctx.sampleRate * durationSec;
+          const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+          }
+          
+          const noise = ctx.createBufferSource();
+          noise.buffer = buffer;
+          
+          const filter = ctx.createBiquadFilter();
+          filter.type = "highpass";
+          filter.frequency.value = 4000;
+          
+          noise.connect(filter);
+          filter.connect(gainNode);
+          
+          gainNode.gain.setValueAtTime(0, now);
+          gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
+          gainNode.gain.setValueAtTime(0.3, now + durationSec - 0.05);
+          gainNode.gain.linearRampToValueAtTime(0, now + durationSec);
+          
+          noise.start(now);
+          break;
+        }
+      }
+
+      // Wait for the sound to complete
+      await this.delay(durationMs, signal);
+    } catch (e) {
+      console.error("Error playing sound:", e);
     }
-
-    // Wait for the sound to complete
-    await this.delay(durationMs, signal);
-  }
-
-  /**
-   * Wait for silence duration
-   */
-  private async playSilence(signal?: AbortSignal): Promise<void> {
-    return this.delay(this.config.silenceDurationMs, signal);
   }
 
   /**
@@ -349,19 +302,11 @@ export class SoundEngine {
    */
   async dispose() {
     this.stop();
-    this.beepSynth?.dispose();
-    this.whistleSynth?.dispose();
-    this.whistleVibrato?.dispose();
-    this.growlSynth?.dispose();
-    this.noiseSynth?.dispose();
-    this.noiseFilter?.dispose();
-    this.beepSynth = null;
-    this.whistleSynth = null;
-    this.whistleVibrato = null;
-    this.growlSynth = null;
-    this.noiseSynth = null;
-    this.noiseFilter = null;
-    this.initialized = false;
+    if (this.audioContext) {
+      await this.audioContext.close();
+      this.audioContext = null;
+    }
+    this.unlocked = false;
   }
 }
 

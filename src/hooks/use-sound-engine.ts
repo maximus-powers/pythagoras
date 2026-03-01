@@ -9,25 +9,6 @@ export function useSoundEngine() {
   const { soundConfig, isMuted, setSoundConfig, setMuted } = useAppStore();
   const [isAudioReady, setIsAudioReady] = useState(false);
 
-  // Attach unlock listeners on mount (for iOS/Safari)
-  useEffect(() => {
-    const engine = engineRef.current;
-    engine.attachUnlockListeners();
-    
-    // Check periodically if audio is ready
-    const checkReady = () => {
-      if (engine.isReady()) {
-        setIsAudioReady(true);
-      }
-    };
-    
-    // Check immediately and after common unlock events
-    checkReady();
-    const interval = setInterval(checkReady, 500);
-    
-    return () => clearInterval(interval);
-  }, []);
-
   // Sync engine config with store
   useEffect(() => {
     engineRef.current.setConfig(soundConfig);
@@ -37,10 +18,14 @@ export function useSoundEngine() {
     if (isMuted) return;
     
     try {
-      await engineRef.current.playSequence(sequence);
+      // Try to unlock audio on every play attempt (required for iOS)
+      const engine = engineRef.current;
+      await engine.unlock();
+      await engine.playSequence(sequence);
+      
       // Update ready state after successful play
-      if (!isAudioReady) {
-        setIsAudioReady(engineRef.current.isReady());
+      if (!isAudioReady && engine.isReady()) {
+        setIsAudioReady(true);
       }
     } catch (err) {
       console.error("Failed to play sequence:", err);
