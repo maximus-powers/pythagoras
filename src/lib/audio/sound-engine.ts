@@ -48,9 +48,63 @@ export class SoundEngine {
   private noiseSynth: NoiseSynth | null = null;
   private noiseFilter: Filter | null = null;
   private initialized = false;
+  private unlockListenerAttached = false;
+  private audioUnlocked = false;
 
   constructor(config: SoundConfig = DEFAULT_CONFIG) {
     this.config = config;
+  }
+
+  /**
+   * Attach unlock listeners for iOS/Safari audio context
+   * Must be called on client-side only
+   */
+  attachUnlockListeners(): void {
+    if (this.unlockListenerAttached || typeof window === "undefined") return;
+    
+    const unlockAudio = async () => {
+      if (this.audioUnlocked) return;
+      
+      try {
+        // Load Tone.js if not loaded
+        if (!this.Tone) {
+          this.Tone = await import("tone");
+        }
+        
+        // Start the audio context - this MUST happen in a user gesture handler
+        await this.Tone.start();
+        
+        // Play a silent sound to fully unlock on iOS
+        const ctx = this.Tone.getContext();
+        if (ctx.rawContext && ctx.rawContext.state === "suspended") {
+          await ctx.rawContext.resume();
+        }
+        
+        this.audioUnlocked = true;
+        console.log("Audio unlocked, context state:", this.Tone.getContext().state);
+        
+        // Remove listeners after successful unlock
+        document.removeEventListener("touchstart", unlockAudio, true);
+        document.removeEventListener("touchend", unlockAudio, true);
+        document.removeEventListener("click", unlockAudio, true);
+      } catch (err) {
+        console.warn("Audio unlock attempt failed:", err);
+      }
+    };
+    
+    // Use capture phase to catch events before they're handled
+    document.addEventListener("touchstart", unlockAudio, true);
+    document.addEventListener("touchend", unlockAudio, true);
+    document.addEventListener("click", unlockAudio, true);
+    this.unlockListenerAttached = true;
+    console.log("Audio unlock listeners attached");
+  }
+
+  /**
+   * Check if audio is ready to play
+   */
+  isReady(): boolean {
+    return this.audioUnlocked && this.initialized;
   }
 
   /**
@@ -58,6 +112,12 @@ export class SoundEngine {
    */
   private async ensureInitialized(): Promise<void> {
     if (this.initialized && this.Tone) {
+      // Always try to resume in case context was suspended (iOS background)
+      const ctx = this.Tone.getContext();
+      if (ctx.rawContext && ctx.rawContext.state === "suspended") {
+        console.log("Resuming suspended audio context...");
+        await ctx.rawContext.resume();
+      }
       await this.Tone.start();
       return;
     }
@@ -66,7 +126,15 @@ export class SoundEngine {
     const Tone = await import("tone");
     this.Tone = Tone;
     
+    // Resume if suspended (iOS)
+    const ctx = Tone.getContext();
+    if (ctx.rawContext && ctx.rawContext.state === "suspended") {
+      console.log("Resuming suspended audio context during init...");
+      await ctx.rawContext.resume();
+    }
+    
     await Tone.start();
+    this.audioUnlocked = true;
     console.log("Tone.js initialized, audio context state:", Tone.getContext().state);
     
     // Clean sine wave beep - classic clicker sound

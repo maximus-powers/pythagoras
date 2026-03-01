@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Volume2 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { CommandGrid } from "@/components/command/command-grid";
@@ -19,7 +19,7 @@ export default function CommandBoard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { isMarking, startMarking, trackingEnabled } = useAppStore();
-  const { playSequence } = useSoundEngine();
+  const { playSequence, isAudioReady, isMuted } = useSoundEngine();
 
   // Separate marks from other commands
   const { marks, otherCommands } = useMemo(() => {
@@ -89,6 +89,14 @@ export default function CommandBoard() {
       </div>
       
       <main className="p-4 max-w-lg mx-auto">
+        {/* Audio unlock banner for iOS */}
+        {!isAudioReady && !isMuted && !isLoading && (
+          <div className="mb-4 p-3 bg-amber-900/50 border border-amber-700 rounded-lg flex items-center gap-3 text-amber-200 text-sm">
+            <Volume2 className="h-5 w-5 flex-shrink-0" />
+            <span>Tap any button to enable sound</span>
+          </div>
+        )}
+        
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-muted-foreground">Loading commands...</div>
