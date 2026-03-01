@@ -194,7 +194,7 @@ export default function CommandBoard() {
           <div className={audioDebug.state === "running" ? "text-green-400" : "text-red-400"}>
             AudioContext: {audioDebug.state} | {audioDebug.sampleRate}Hz | unlocked: {audioDebug.unlocked ? "yes" : "no"}
           </div>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             <button
               onClick={async () => {
                 const result = await testBeep();
@@ -213,6 +213,29 @@ export default function CommandBoard() {
               className="px-3 py-1 bg-green-600 text-white rounded text-xs"
             >
               HTML AUDIO
+            </button>
+            <button
+              onClick={() => {
+                // Completely synchronous - no awaits at all
+                try {
+                  const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+                  const ctx = new AC();
+                  const osc = ctx.createOscillator();
+                  const gain = ctx.createGain();
+                  osc.frequency.value = 440;
+                  gain.gain.value = 1;
+                  osc.connect(gain);
+                  gain.connect(ctx.destination);
+                  osc.start();
+                  osc.stop(ctx.currentTime + 0.5);
+                  log(`SYNC: ctx=${ctx.state}, baseLatency=${ctx.baseLatency}`);
+                } catch (e) {
+                  log(`SYNC ERR: ${e}`);
+                }
+              }}
+              className="px-3 py-1 bg-red-600 text-white rounded text-xs"
+            >
+              SYNC TEST
             </button>
           </div>
           <div className="mt-2 border-t border-purple-500/50 pt-2">
