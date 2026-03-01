@@ -44,6 +44,10 @@ export function useSoundEngine() {
     setMuted(!isMuted);
   }, [isMuted, setMuted]);
 
+  const getDebugInfo = useCallback(() => {
+    return engineRef.current.getDebugInfo();
+  }, []);
+
   return {
     playSequence,
     stop,
@@ -52,5 +56,6 @@ export function useSoundEngine() {
     config: soundConfig,
     setConfig,
     isAudioReady,
+    getDebugInfo,
   };
 }

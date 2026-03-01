@@ -21,7 +21,8 @@ export default function CommandBoard() {
   const [debugLog, setDebugLog] = useState<string[]>([]);
   const [showDebug, setShowDebug] = useState(false);
   const { isMarking, startMarking, trackingEnabled } = useAppStore();
-  const { playSequence, isAudioReady, isMuted } = useSoundEngine();
+  const { playSequence, isAudioReady, isMuted, getDebugInfo } = useSoundEngine();
+  const [audioDebug, setAudioDebug] = useState({ state: "unknown", sampleRate: 0, unlocked: false });
 
   const log = useCallback((msg: string) => {
     setDebugLog(prev => [...prev.slice(-9), `${new Date().toLocaleTimeString()}: ${msg}`]);
@@ -60,7 +61,9 @@ export default function CommandBoard() {
     try {
       // Play the command sound
       await playSequence(command.sequence);
-      log(`Played: ${command.sequence}`);
+      const debug = getDebugInfo();
+      setAudioDebug(debug);
+      log(`Played: ${command.sequence} (ctx: ${debug.state})`);
       
       // Increment exposure count for training communication tracking
       fetch("/api/commands/exposure", {
@@ -77,18 +80,20 @@ export default function CommandBoard() {
     } catch (err) {
       log(`Error: ${err}`);
     }
-  }, [startMarking, playSequence, trackingEnabled, log]);
+  }, [startMarking, playSequence, trackingEnabled, log, getDebugInfo]);
 
   const handleMarkClick = useCallback(async (command: Command) => {
     log(`Mark tap: ${command.word}`);
     try {
       // Just play the sound for marks, no marking flow
       await playSequence(command.sequence);
-      log(`Played mark: ${command.sequence}`);
+      const debug = getDebugInfo();
+      setAudioDebug(debug);
+      log(`Played mark: ${command.sequence} (ctx: ${debug.state})`);
     } catch (err) {
       log(`Mark error: ${err}`);
     }
-  }, [playSequence, log]);
+  }, [playSequence, log, getDebugInfo]);
 
   const handleMarkingComplete = useCallback(() => {
     // Marking panel handles its own state, this is just for any additional cleanup
@@ -182,10 +187,13 @@ export default function CommandBoard() {
       {/* Debug panel */}
       {showDebug && (
         <div className="fixed bottom-32 right-4 left-4 z-50 p-3 bg-black/90 border border-purple-500 rounded-lg text-xs font-mono text-green-400 max-h-48 overflow-auto">
-          <div className="mb-2 text-purple-400">Debug Log (v3):</div>
+          <div className="mb-2 text-purple-400">Debug Log (v4):</div>
           <div>Audio ready: {isAudioReady ? "yes" : "no"}</div>
           <div>Muted: {isMuted ? "yes" : "no"}</div>
           <div>Commands loaded: {commands.length}</div>
+          <div className={audioDebug.state === "running" ? "text-green-400" : "text-red-400"}>
+            AudioContext: {audioDebug.state} | {audioDebug.sampleRate}Hz | unlocked: {audioDebug.unlocked ? "yes" : "no"}
+          </div>
           <div className="mt-2 border-t border-purple-500/50 pt-2">
             {debugLog.length === 0 ? (
               <div className="text-gray-500">No events yet - tap a button</div>

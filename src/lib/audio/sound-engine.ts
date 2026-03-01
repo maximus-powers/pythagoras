@@ -88,6 +88,17 @@ export class SoundEngine {
     return this.unlocked;
   }
 
+  /**
+   * Get debug info about audio state
+   */
+  getDebugInfo(): { state: string; sampleRate: number; unlocked: boolean } {
+    return {
+      state: this.audioContext?.state ?? "no-context",
+      sampleRate: this.audioContext?.sampleRate ?? 0,
+      unlocked: this.unlocked,
+    };
+  }
+
   setConfig(config: Partial<SoundConfig>) {
     this.config = { ...this.config, ...config };
   }
