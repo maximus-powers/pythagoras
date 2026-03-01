@@ -243,6 +243,18 @@ export default function CommandBoard() {
             >
               SYNC TEST
             </button>
+            <button
+              onClick={() => {
+                // Try playing an actual MP3 file from a CDN
+                const audio = new Audio("https://cdn.freesound.org/previews/254/254819_4486188-lq.mp3");
+                audio.play()
+                  .then(() => log("MP3: play() succeeded"))
+                  .catch((e) => log(`MP3: ${e.name} - ${e.message}`));
+              }}
+              className="px-3 py-1 bg-yellow-600 text-white rounded text-xs"
+            >
+              MP3 TEST
+            </button>
           </div>
           <div className="mt-2 border-t border-purple-500/50 pt-2">
             {debugLog.length === 0 ? (
