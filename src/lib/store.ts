@@ -55,11 +55,8 @@ interface AppState extends MarkingState, SessionState, SettingsState, SoundState
 
 const DEFAULT_SOUND_CONFIG: SoundConfig = {
   soundType: "beep" as SoundType,
-  frequency: 800,
-  shortDurationMs: 100,
-  longDurationMs: 300,
   silenceDurationMs: 150,
-  gapDurationMs: 120,
+  gapDurationMs: 100,
 };
 
 export const useAppStore = create<AppState>()(

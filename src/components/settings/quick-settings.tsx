@@ -1,6 +1,6 @@
 "use client";
 
-import { Volume2, Wind, Dog, Waves, RotateCcw } from "lucide-react";
+import { Volume2, Wind, Dog, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -11,18 +11,14 @@ import type { SoundType } from "@/lib/audio/sound-engine";
 
 const DEFAULT_CONFIG = {
   soundType: "beep" as SoundType,
-  frequency: 800,
-  shortDurationMs: 100,
-  longDurationMs: 300,
   silenceDurationMs: 150,
-  gapDurationMs: 120,
+  gapDurationMs: 100,
 };
 
 const SOUND_TYPES: { value: SoundType; icon: React.ReactNode; label: string }[] = [
   { value: "beep", icon: <Volume2 className="h-5 w-5" />, label: "Beep" },
   { value: "whistle", icon: <Wind className="h-5 w-5" />, label: "Whistle" },
   { value: "growl", icon: <Dog className="h-5 w-5" />, label: "Growl" },
-  { value: "tss", icon: <Waves className="h-5 w-5" />, label: "Tss" },
 ];
 
 interface QuickSettingsProps {
@@ -40,7 +36,7 @@ export function QuickSettings({ isOpen }: QuickSettingsProps) {
         {/* Sound Type Selection */}
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">Sound Type</Label>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {SOUND_TYPES.map((type) => (
               <Button
                 key={type.value}
@@ -54,51 +50,6 @@ export function QuickSettings({ isOpen }: QuickSettingsProps) {
               </Button>
             ))}
           </div>
-        </div>
-
-        {/* Frequency */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs text-muted-foreground">Frequency</Label>
-            <span className="text-xs text-muted-foreground">{config.frequency} Hz</span>
-          </div>
-          <Slider
-            value={[config.frequency]}
-            onValueChange={([value]) => setConfig({ frequency: value })}
-            min={200}
-            max={2000}
-            step={50}
-          />
-        </div>
-
-        {/* Short Duration */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs text-muted-foreground">Short "."</Label>
-            <span className="text-xs text-muted-foreground">{config.shortDurationMs}ms</span>
-          </div>
-          <Slider
-            value={[config.shortDurationMs]}
-            onValueChange={([value]) => setConfig({ shortDurationMs: value })}
-            min={50}
-            max={500}
-            step={10}
-          />
-        </div>
-
-        {/* Long Duration */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs text-muted-foreground">Long "_"</Label>
-            <span className="text-xs text-muted-foreground">{config.longDurationMs}ms</span>
-          </div>
-          <Slider
-            value={[config.longDurationMs]}
-            onValueChange={([value]) => setConfig({ longDurationMs: value })}
-            min={50}
-            max={500}
-            step={10}
-          />
         </div>
 
         {/* Silence Duration */}

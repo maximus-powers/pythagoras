@@ -21,8 +21,7 @@ export default function CommandBoard() {
   const [debugLog, setDebugLog] = useState<string[]>([]);
   const [showDebug, setShowDebug] = useState(false);
   const { isMarking, startMarking, trackingEnabled } = useAppStore();
-  const { playSequence, isAudioReady, isMuted, getDebugInfo, testBeep, testHtmlAudio } = useSoundEngine();
-  const [audioDebug, setAudioDebug] = useState({ state: "unknown", sampleRate: 0, unlocked: false });
+  const { playSequence, isAudioReady, isMuted, getDebugInfo, testSound } = useSoundEngine();
 
   const log = useCallback((msg: string) => {
     setDebugLog(prev => [...prev.slice(-9), `${new Date().toLocaleTimeString()}: ${msg}`]);
@@ -59,11 +58,8 @@ export default function CommandBoard() {
   const handleCommandClick = useCallback(async (command: Command) => {
     log(`Tap: ${command.word}`);
     try {
-      // Play the command sound
       await playSequence(command.sequence);
-      const debug = getDebugInfo();
-      setAudioDebug(debug);
-      log(`Played: ${command.sequence} (ctx: ${debug.state})`);
+      log(`Played: ${command.sequence}`);
       
       // Increment exposure count for training communication tracking
       fetch("/api/commands/exposure", {
@@ -80,24 +76,23 @@ export default function CommandBoard() {
     } catch (err) {
       log(`Error: ${err}`);
     }
-  }, [startMarking, playSequence, trackingEnabled, log, getDebugInfo]);
+  }, [startMarking, playSequence, trackingEnabled, log]);
 
   const handleMarkClick = useCallback(async (command: Command) => {
     log(`Mark tap: ${command.word}`);
     try {
-      // Just play the sound for marks, no marking flow
       await playSequence(command.sequence);
-      const debug = getDebugInfo();
-      setAudioDebug(debug);
-      log(`Played mark: ${command.sequence} (ctx: ${debug.state})`);
+      log(`Played mark: ${command.sequence}`);
     } catch (err) {
       log(`Mark error: ${err}`);
     }
-  }, [playSequence, log, getDebugInfo]);
+  }, [playSequence, log]);
 
   const handleMarkingComplete = useCallback(() => {
     // Marking panel handles its own state, this is just for any additional cleanup
   }, []);
+
+  const debugInfo = getDebugInfo();
 
   return (
     <div className="min-h-screen pb-20">
@@ -112,11 +107,11 @@ export default function CommandBoard() {
       </div>
       
       <main className="p-4 max-w-lg mx-auto">
-        {/* Audio unlock banner for iOS */}
+        {/* Audio loading banner */}
         {!isAudioReady && !isMuted && !isLoading && (
           <div className="mb-4 p-3 bg-amber-900/50 border border-amber-700 rounded-lg flex items-center gap-3 text-amber-200 text-sm">
             <Volume2 className="h-5 w-5 flex-shrink-0" />
-            <span>Tap any button to enable sound</span>
+            <span>Loading sounds...</span>
           </div>
         )}
         
@@ -187,96 +182,19 @@ export default function CommandBoard() {
       {/* Debug panel */}
       {showDebug && (
         <div className="fixed bottom-32 right-4 left-4 z-50 p-3 bg-black/90 border border-purple-500 rounded-lg text-xs font-mono text-green-400 max-h-48 overflow-auto">
-          <div className="mb-2 text-purple-400">Debug Log (v9 - reverted to v6):</div>
-          <div>Audio ready: {isAudioReady ? "yes" : "no"}</div>
-          <div>Muted: {isMuted ? "yes" : "no"}</div>
-          <div>Commands loaded: {commands.length}</div>
-          <div className={audioDebug.state === "running" ? "text-green-400" : "text-red-400"}>
-            AudioContext: {audioDebug.state} | {audioDebug.sampleRate}Hz | unlocked: {audioDebug.unlocked ? "yes" : "no"}
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mb-2 text-purple-400">Debug (Howler.js v14):</div>
+          <div>Sounds loaded: {debugInfo.loaded ? "yes" : "no"}</div>
+          <div>Howler ctx: {debugInfo.ctx}</div>
+          <div>Muted: {debugInfo.muted ? "yes" : "no"}</div>
+          <div className="mt-2">
             <button
               onClick={async () => {
-                const result = await testBeep();
-                log(`WebAudio: ${result}`);
-                setAudioDebug(getDebugInfo());
+                const result = await testSound();
+                log(result);
               }}
               className="px-3 py-1 bg-purple-600 text-white rounded text-xs"
             >
-              WEB AUDIO
-            </button>
-            <button
-              onClick={async () => {
-                const result = await testHtmlAudio();
-                log(`${result}`);
-              }}
-              className="px-3 py-1 bg-green-600 text-white rounded text-xs"
-            >
-              HTML AUDIO
-            </button>
-            <button
-              onClick={() => {
-                // Create context and immediately resume
-                try {
-                  const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-                  const ctx = new AC();
-                  
-                  // Resume and play after resume completes
-                  ctx.resume().then(() => {
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.frequency.value = 440;
-                    gain.gain.value = 1;
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start();
-                    osc.stop(ctx.currentTime + 0.5);
-                    log(`SYNC+RESUME: ctx=${ctx.state}, playing 440Hz`);
-                  });
-                  
-                  log(`SYNC: created ctx=${ctx.state}, resuming...`);
-                } catch (e) {
-                  log(`SYNC ERR: ${e}`);
-                }
-              }}
-              className="px-3 py-1 bg-red-600 text-white rounded text-xs"
-            >
-              SYNC TEST
-            </button>
-            <button
-              onClick={() => {
-                // Try playing an actual MP3 file from a CDN
-                const audio = new Audio("https://cdn.freesound.org/previews/254/254819_4486188-lq.mp3");
-                audio.play()
-                  .then(() => log("MP3: play() succeeded"))
-                  .catch((e) => log(`MP3: ${e.name} - ${e.message}`));
-              }}
-              className="px-3 py-1 bg-yellow-600 text-white rounded text-xs"
-            >
-              MP3 TEST
-            </button>
-            <button
-              ref={(el) => {
-                if (el && !el.dataset.bound) {
-                  el.dataset.bound = "true";
-                  // Use native DOM event, not React synthetic event
-                  el.addEventListener("touchend", () => {
-                    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-                    const ctx = new AC();
-                    ctx.resume().then(() => {
-                      const osc = ctx.createOscillator();
-                      osc.frequency.value = 440;
-                      osc.connect(ctx.destination);
-                      osc.start();
-                      osc.stop(ctx.currentTime + 0.3);
-                    });
-                    log(`NATIVE: ctx=${ctx.state}`);
-                  }, { once: false });
-                }
-              }}
-              className="px-3 py-1 bg-pink-600 text-white rounded text-xs"
-            >
-              NATIVE EVT
+              TEST SOUND
             </button>
           </div>
           <div className="mt-2 border-t border-purple-500/50 pt-2">

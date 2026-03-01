@@ -9,6 +9,15 @@ export function useSoundEngine() {
   const { soundConfig, isMuted, setSoundConfig, setMuted } = useAppStore();
   const [isAudioReady, setIsAudioReady] = useState(false);
 
+  // Preload sounds on mount
+  useEffect(() => {
+    engineRef.current.loadSounds().then(() => {
+      setIsAudioReady(true);
+    }).catch((err) => {
+      console.error("Failed to load sounds:", err);
+    });
+  }, []);
+
   // Sync engine config with store
   useEffect(() => {
     engineRef.current.setConfig(soundConfig);
@@ -18,19 +27,11 @@ export function useSoundEngine() {
     if (isMuted) return;
     
     try {
-      // Try to unlock audio on every play attempt (required for iOS)
-      const engine = engineRef.current;
-      await engine.unlock();
-      await engine.playSequence(sequence);
-      
-      // Update ready state after successful play
-      if (!isAudioReady && engine.isReady()) {
-        setIsAudioReady(true);
-      }
+      await engineRef.current.playSequence(sequence);
     } catch (err) {
       console.error("Failed to play sequence:", err);
     }
-  }, [isMuted, isAudioReady]);
+  }, [isMuted]);
 
   const stop = useCallback(() => {
     engineRef.current.stop();
@@ -48,12 +49,8 @@ export function useSoundEngine() {
     return engineRef.current.getDebugInfo();
   }, []);
 
-  const testBeep = useCallback(async () => {
-    return engineRef.current.testBeep();
-  }, []);
-
-  const testHtmlAudio = useCallback(async () => {
-    return engineRef.current.testHtmlAudio();
+  const testSound = useCallback(async () => {
+    return engineRef.current.testSound();
   }, []);
 
   return {
@@ -65,7 +62,6 @@ export function useSoundEngine() {
     setConfig,
     isAudioReady,
     getDebugInfo,
-    testBeep,
-    testHtmlAudio,
+    testSound,
   };
 }

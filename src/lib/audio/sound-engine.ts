@@ -1,178 +1,101 @@
-export type SoundType = "beep" | "whistle" | "growl" | "tss";
+import { Howl, Howler } from "howler";
+
+export type SoundType = "beep" | "whistle" | "growl";
 
 export interface SoundConfig {
   soundType: SoundType;
-  frequency: number;
-  shortDurationMs: number;
-  longDurationMs: number;
   silenceDurationMs: number;
   gapDurationMs: number;
 }
 
 export const DEFAULT_CONFIG: SoundConfig = {
   soundType: "beep",
-  frequency: 800,
-  shortDurationMs: 100,
-  longDurationMs: 300,
   silenceDurationMs: 150,
-  gapDurationMs: 120,
+  gapDurationMs: 100,
 };
 
-// Gap multiplier by sound type (whistle needs longer gaps due to vibrato)
-const GAP_MULTIPLIER: Record<SoundType, number> = {
-  beep: 1,
-  whistle: 1.7,
-  growl: 1,
-  tss: 1,
-};
+interface SoundSet {
+  short: Howl;
+  long: Howl;
+}
 
 export class SoundEngine {
   private config: SoundConfig;
+  private sounds: Record<SoundType, SoundSet> | null = null;
   private isPlaying = false;
   private abortController: AbortController | null = null;
-  private audioContext: AudioContext | null = null;
-  private unlocked = false;
+  private loadPromise: Promise<void> | null = null;
 
   constructor(config: SoundConfig = DEFAULT_CONFIG) {
     this.config = config;
   }
 
   /**
-   * Get or create AudioContext, resuming if suspended
+   * Load all sound files - call this early to preload
    */
-  private async getContext(): Promise<AudioContext> {
-    if (!this.audioContext) {
-      // Use webkitAudioContext for older iOS Safari
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      this.audioContext = new AudioContextClass();
-    }
-    
-    // Always try to resume (required on iOS after suspend)
-    if (this.audioContext.state === "suspended") {
-      try {
-        await this.audioContext.resume();
-      } catch (e) {
-        console.warn("Failed to resume audio context:", e);
+  async loadSounds(): Promise<void> {
+    if (this.sounds) return;
+    if (this.loadPromise) return this.loadPromise;
+
+    this.loadPromise = new Promise((resolve, reject) => {
+      const soundTypes: SoundType[] = ["beep", "whistle", "growl"];
+      const sounds: Partial<Record<SoundType, SoundSet>> = {};
+      let loadedCount = 0;
+      const totalSounds = soundTypes.length * 2;
+
+      const onLoad = () => {
+        loadedCount++;
+        if (loadedCount === totalSounds) {
+          this.sounds = sounds as Record<SoundType, SoundSet>;
+          console.log("All sounds loaded successfully");
+          resolve();
+        }
+      };
+
+      const onError = (type: string, variant: string) => () => {
+        console.error(`Failed to load ${type}-${variant}`);
+        reject(new Error(`Failed to load ${type}-${variant}`));
+      };
+
+      for (const type of soundTypes) {
+        sounds[type] = {
+          short: new Howl({
+            src: [`/sounds/${type}-short.mp3`],
+            html5: true, // More reliable on iOS
+            preload: true,
+            onload: onLoad,
+            onloaderror: onError(type, "short"),
+          }),
+          long: new Howl({
+            src: [`/sounds/${type}-long.mp3`],
+            html5: true,
+            preload: true,
+            onload: onLoad,
+            onloaderror: onError(type, "long"),
+          }),
+        };
       }
-    }
-    
-    return this.audioContext;
+    });
+
+    return this.loadPromise;
   }
 
   /**
-   * Unlock audio on iOS - call from user gesture
+   * Check if sounds are loaded and ready
    */
-  async unlock(): Promise<boolean> {
-    if (this.unlocked) return true;
-    
-    try {
-      const ctx = await this.getContext();
-      
-      // Play an audible test tone to unlock (silent buffers don't always work on iOS 17+)
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 440;
-      gain.gain.value = 0.3;
-      osc.start();
-      osc.stop(ctx.currentTime + 0.1);
-      
-      this.unlocked = true;
-      console.log("Audio unlocked, context state:", ctx.state);
-      return true;
-    } catch (e) {
-      console.warn("Audio unlock failed:", e);
-      return false;
-    }
-  }
-
   isReady(): boolean {
-    return this.unlocked;
+    return this.sounds !== null;
   }
 
   /**
-   * Get debug info about audio state
+   * Get debug info
    */
-  getDebugInfo(): { state: string; sampleRate: number; unlocked: boolean } {
+  getDebugInfo(): { loaded: boolean; ctx: string; muted: boolean } {
     return {
-      state: this.audioContext?.state ?? "no-context",
-      sampleRate: this.audioContext?.sampleRate ?? 0,
-      unlocked: this.unlocked,
+      loaded: this.sounds !== null,
+      ctx: Howler.ctx ? Howler.ctx.state : "no-context",
+      muted: Howler.volume() === 0,
     };
-  }
-
-  /**
-   * Play a simple test beep - for debugging (Web Audio API)
-   */
-  async testBeep(): Promise<string> {
-    try {
-      const ctx = await this.getContext();
-      
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      
-      osc.type = "sine";
-      osc.frequency.value = 880; // A5 - easy to hear
-      gain.gain.value = 1.0; // Max volume
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      const startTime = ctx.currentTime;
-      osc.start(startTime);
-      osc.stop(startTime + 0.5); // Half second beep
-      
-      return `OK: ctx=${ctx.state}, dest=${ctx.destination.channelCount}ch, time=${startTime.toFixed(2)}`;
-    } catch (e) {
-      return `ERR: ${e}`;
-    }
-  }
-
-  /**
-   * Test using HTML5 Audio element - alternative approach for iOS
-   */
-  async testHtmlAudio(): Promise<string> {
-    try {
-      // Base64 encoded WAV file: 440Hz sine wave, 0.5 seconds
-      const wavBase64 = "UklGRl4lAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YTolAAA" + 
-        this.generateSineWaveBase64(440, 0.5);
-      
-      const audio = new Audio(`data:audio/wav;base64,${wavBase64}`);
-      audio.volume = 1.0;
-      
-      return new Promise((resolve) => {
-        audio.onended = () => resolve("HTML Audio: played successfully");
-        audio.onerror = (e) => resolve(`HTML Audio error: ${e}`);
-        audio.play()
-          .then(() => resolve("HTML Audio: play() succeeded"))
-          .catch((e) => resolve(`HTML Audio play() failed: ${e}`));
-      });
-    } catch (e) {
-      return `HTML Audio ERR: ${e}`;
-    }
-  }
-
-  /**
-   * Generate base64 encoded PCM data for a sine wave
-   */
-  private generateSineWaveBase64(freq: number, durationSec: number): string {
-    const sampleRate = 44100;
-    const numSamples = Math.floor(sampleRate * durationSec);
-    const buffer = new Int16Array(numSamples);
-    
-    for (let i = 0; i < numSamples; i++) {
-      const t = i / sampleRate;
-      buffer[i] = Math.floor(Math.sin(2 * Math.PI * freq * t) * 32767 * 0.8);
-    }
-    
-    // Convert to base64
-    const bytes = new Uint8Array(buffer.buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
   }
 
   setConfig(config: Partial<SoundConfig>) {
@@ -189,6 +112,14 @@ export class SoundEngine {
       this.abortController = null;
     }
     this.isPlaying = false;
+
+    // Stop all currently playing sounds
+    if (this.sounds) {
+      for (const type of Object.values(this.sounds)) {
+        type.short.stop();
+        type.long.stop();
+      }
+    }
   }
 
   /**
@@ -209,6 +140,14 @@ export class SoundEngine {
    * Play a complete sequence
    */
   async playSequence(sequence: string): Promise<void> {
+    // Ensure sounds are loaded
+    await this.loadSounds();
+
+    if (!this.sounds) {
+      console.error("Sounds not loaded");
+      return;
+    }
+
     if (this.isPlaying) {
       this.stop();
     }
@@ -218,24 +157,29 @@ export class SoundEngine {
     const { signal } = this.abortController;
 
     const tokens = this.parseSequence(sequence);
+    const soundSet = this.sounds[this.config.soundType];
 
     try {
       for (let i = 0; i < tokens.length; i++) {
         if (signal.aborted) break;
 
         const token = tokens[i];
-        
+
         if (token === "0") {
+          // Silence
           await this.delay(this.config.silenceDurationMs, signal);
         } else {
-          const duration = token === "." ? this.config.shortDurationMs : this.config.longDurationMs;
-          await this.playSound(duration, signal);
+          // Play short or long sound
+          const sound = token === "." ? soundSet.short : soundSet.long;
+          const duration = token === "." ? 100 : 300; // Match the file durations
+          
+          sound.play();
+          await this.delay(duration, signal);
         }
 
         // Add gap between elements (except after the last one)
         if (i < tokens.length - 1 && !signal.aborted) {
-          const gap = this.config.gapDurationMs * GAP_MULTIPLIER[this.config.soundType];
-          await this.delay(gap, signal);
+          await this.delay(this.config.gapDurationMs, signal);
         }
       }
     } finally {
@@ -245,118 +189,22 @@ export class SoundEngine {
   }
 
   /**
-   * Play a single sound element based on current sound type
+   * Play a simple test sound
    */
-  private async playSound(durationMs: number, signal?: AbortSignal): Promise<void> {
-    if (signal?.aborted) return;
-
+  async testSound(): Promise<string> {
     try {
-      const ctx = await this.getContext();
-      const durationSec = durationMs / 1000;
-      const frequency = this.config.frequency;
-      const now = ctx.currentTime;
-
-      const gainNode = ctx.createGain();
-      gainNode.connect(ctx.destination);
-
-      switch (this.config.soundType) {
-        case "beep": {
-          const osc = ctx.createOscillator();
-          osc.type = "sine";
-          osc.frequency.value = frequency;
-          osc.connect(gainNode);
-          
-          // Simple loud beep - no fancy envelope (iOS compatibility)
-          gainNode.gain.value = 1.0;
-          
-          osc.start(now);
-          osc.stop(now + durationSec);
-          break;
-        }
-        
-        case "whistle": {
-          const osc = ctx.createOscillator();
-          osc.type = "sine";
-          osc.frequency.value = frequency * 2.5;
-          
-          // Add vibrato with LFO
-          const lfo = ctx.createOscillator();
-          const lfoGain = ctx.createGain();
-          lfo.frequency.value = 5;
-          lfoGain.gain.value = 30;
-          lfo.connect(lfoGain);
-          lfoGain.connect(osc.frequency);
-          
-          osc.connect(gainNode);
-          
-          gainNode.gain.setValueAtTime(0, now);
-          gainNode.gain.linearRampToValueAtTime(0.4, now + 0.05);
-          gainNode.gain.setValueAtTime(0.4, now + durationSec - 0.05);
-          gainNode.gain.linearRampToValueAtTime(0, now + durationSec);
-          
-          lfo.start(now);
-          osc.start(now);
-          osc.stop(now + durationSec);
-          lfo.stop(now + durationSec);
-          break;
-        }
-        
-        case "growl": {
-          const osc = ctx.createOscillator();
-          osc.type = "sawtooth";
-          osc.frequency.value = frequency / 4;
-          
-          const filter = ctx.createBiquadFilter();
-          filter.type = "lowpass";
-          filter.frequency.value = 400;
-          filter.Q.value = 5;
-          
-          osc.connect(filter);
-          filter.connect(gainNode);
-          
-          gainNode.gain.setValueAtTime(0, now);
-          gainNode.gain.linearRampToValueAtTime(0.6, now + 0.05);
-          gainNode.gain.setValueAtTime(0.6, now + durationSec - 0.1);
-          gainNode.gain.linearRampToValueAtTime(0, now + durationSec);
-          
-          osc.start(now);
-          osc.stop(now + durationSec);
-          break;
-        }
-        
-        case "tss": {
-          // Create white noise for tss sound
-          const bufferSize = ctx.sampleRate * durationSec;
-          const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-          const data = buffer.getChannelData(0);
-          for (let i = 0; i < bufferSize; i++) {
-            data[i] = Math.random() * 2 - 1;
-          }
-          
-          const noise = ctx.createBufferSource();
-          noise.buffer = buffer;
-          
-          const filter = ctx.createBiquadFilter();
-          filter.type = "highpass";
-          filter.frequency.value = 4000;
-          
-          noise.connect(filter);
-          filter.connect(gainNode);
-          
-          gainNode.gain.setValueAtTime(0, now);
-          gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
-          gainNode.gain.setValueAtTime(0.3, now + durationSec - 0.05);
-          gainNode.gain.linearRampToValueAtTime(0, now + durationSec);
-          
-          noise.start(now);
-          break;
-        }
+      await this.loadSounds();
+      if (!this.sounds) {
+        return "ERR: Sounds not loaded";
       }
 
-      // Wait for the sound to complete
-      await this.delay(durationMs, signal);
+      const soundSet = this.sounds[this.config.soundType];
+      soundSet.short.play();
+
+      const ctx = Howler.ctx;
+      return `OK: played ${this.config.soundType}-short, ctx=${ctx?.state ?? "none"}`;
     } catch (e) {
-      console.error("Error playing sound:", e);
+      return `ERR: ${e}`;
     }
   }
 
@@ -373,10 +221,14 @@ export class SoundEngine {
       const timeout = setTimeout(resolve, ms);
 
       if (signal) {
-        signal.addEventListener("abort", () => {
-          clearTimeout(timeout);
-          resolve();
-        }, { once: true });
+        signal.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timeout);
+            resolve();
+          },
+          { once: true }
+        );
       }
     });
   }
@@ -384,13 +236,16 @@ export class SoundEngine {
   /**
    * Cleanup resources
    */
-  async dispose() {
+  dispose() {
     this.stop();
-    if (this.audioContext) {
-      await this.audioContext.close();
-      this.audioContext = null;
+    if (this.sounds) {
+      for (const type of Object.values(this.sounds)) {
+        type.short.unload();
+        type.long.unload();
+      }
+      this.sounds = null;
     }
-    this.unlocked = false;
+    this.loadPromise = null;
   }
 }
 

@@ -34,15 +34,19 @@ const baseUnit = {
   lg: 0.06,
 };
 
+// Fixed durations (matching the pre-recorded sound files)
+const SHORT_DURATION_MS = 100;
+const LONG_DURATION_MS = 300;
+
 export function SequenceDisplay({ sequence, size = "md", className }: SequenceDisplayProps) {
   const { config } = useSoundEngine();
   const tokens = parseSequence(sequence);
   const height = heightClasses[size];
   const unit = baseUnit[size];
 
-  // Calculate widths based on actual durations
-  const shortWidth = Math.max(4, config.shortDurationMs * unit);
-  const longWidth = Math.max(8, config.longDurationMs * unit);
+  // Calculate widths based on fixed durations
+  const shortWidth = Math.max(4, SHORT_DURATION_MS * unit);
+  const longWidth = Math.max(8, LONG_DURATION_MS * unit);
   const silenceWidth = Math.max(4, config.silenceDurationMs * unit);
 
   return (
@@ -54,7 +58,7 @@ export function SequenceDisplay({ sequence, size = "md", className }: SequenceDi
               key={index}
               className={cn(height, "bg-blue-500 rounded-[2px]")}
               style={{ width: `${shortWidth}px` }}
-              title={`short (${config.shortDurationMs}ms)`}
+              title={`short (${SHORT_DURATION_MS}ms)`}
             />
           );
         }
@@ -65,7 +69,7 @@ export function SequenceDisplay({ sequence, size = "md", className }: SequenceDi
               key={index}
               className={cn(height, "bg-blue-500 rounded-[2px]")}
               style={{ width: `${longWidth}px` }}
-              title={`long (${config.longDurationMs}ms)`}
+              title={`long (${LONG_DURATION_MS}ms)`}
             />
           );
         }
@@ -94,8 +98,8 @@ export function SequenceDisplayInline({ sequence, className, color = "blue" }: {
 
   // Smaller scale for inline display
   const unit = 0.025;
-  const shortWidth = Math.max(3, config.shortDurationMs * unit);
-  const longWidth = Math.max(6, config.longDurationMs * unit);
+  const shortWidth = Math.max(3, SHORT_DURATION_MS * unit);
+  const longWidth = Math.max(6, LONG_DURATION_MS * unit);
   const silenceWidth = Math.max(3, config.silenceDurationMs * unit);
   
   const bgColor = color === "white" ? "bg-white" : "bg-blue-500";
