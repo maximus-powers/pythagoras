@@ -255,6 +255,29 @@ export default function CommandBoard() {
             >
               MP3 TEST
             </button>
+            <button
+              ref={(el) => {
+                if (el && !el.dataset.bound) {
+                  el.dataset.bound = "true";
+                  // Use native DOM event, not React synthetic event
+                  el.addEventListener("touchend", () => {
+                    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+                    const ctx = new AC();
+                    ctx.resume().then(() => {
+                      const osc = ctx.createOscillator();
+                      osc.frequency.value = 440;
+                      osc.connect(ctx.destination);
+                      osc.start();
+                      osc.stop(ctx.currentTime + 0.3);
+                    });
+                    log(`NATIVE: ctx=${ctx.state}`);
+                  }, { once: false });
+                }
+              }}
+              className="px-3 py-1 bg-pink-600 text-white rounded text-xs"
+            >
+              NATIVE EVT
+            </button>
           </div>
           <div className="mt-2 border-t border-purple-500/50 pt-2">
             {debugLog.length === 0 ? (
