@@ -38,48 +38,90 @@ export class SoundEngine {
   }
 
   /**
+   * Create AudioContext synchronously - MUST be called from direct user gesture for PWA
+   */
+  ensureContextSync(): AudioContext {
+    if (!this.audioContext) {
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      this.audioContext = new AudioContextClass();
+      console.log("AudioContext created synchronously, state:", this.audioContext.state);
+    }
+    return this.audioContext;
+  }
+
+  /**
    * Get or create AudioContext, resuming if suspended
    */
   private async getContext(): Promise<AudioContext> {
-    if (!this.audioContext) {
-      // Use webkitAudioContext for older iOS Safari
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      this.audioContext = new AudioContextClass();
-    }
+    const ctx = this.ensureContextSync();
     
     // Always try to resume (required on iOS after suspend)
-    if (this.audioContext.state === "suspended") {
+    if (ctx.state === "suspended") {
       try {
-        await this.audioContext.resume();
+        await ctx.resume();
       } catch (e) {
         console.warn("Failed to resume audio context:", e);
       }
     }
     
-    return this.audioContext;
+    return ctx;
   }
 
   /**
-   * Unlock audio on iOS - call from user gesture
+   * Unlock audio on iOS PWA - creates context and plays tone synchronously
+   * MUST be called directly from user tap handler (not in async callback)
    */
-  async unlock(): Promise<boolean> {
-    if (this.unlocked) return true;
+  unlockSync(): void {
+    if (this.unlocked) return;
     
     try {
-      const ctx = await this.getContext();
+      const ctx = this.ensureContextSync();
       
-      // Play an audible test tone to unlock (silent buffers don't always work on iOS 17+)
+      // Resume synchronously if possible
+      if (ctx.state === "suspended" && 'resume' in ctx) {
+        ctx.resume();
+      }
+      
+      // Play a short beep synchronously to unlock
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.frequency.value = 440;
-      gain.gain.value = 0.3;
+      gain.gain.value = 0.001; // Nearly silent unlock tone
       osc.start();
-      osc.stop(ctx.currentTime + 0.1);
+      osc.stop(ctx.currentTime + 0.01);
       
       this.unlocked = true;
-      console.log("Audio unlocked, context state:", ctx.state);
+      console.log("Audio unlocked synchronously, state:", ctx.state);
+    } catch (e) {
+      console.warn("Sync unlock failed:", e);
+    }
+  }
+
+  /**
+   * Unlock audio on iOS - async version
+   */
+  async unlock(): Promise<boolean> {
+    // First try sync unlock
+    this.unlockSync();
+    
+    if (this.unlocked) return true;
+    
+    try {
+      const ctx = await this.getContext();
+      
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 440;
+      gain.gain.value = 0.001;
+      osc.start();
+      osc.stop(ctx.currentTime + 0.01);
+      
+      this.unlocked = true;
+      console.log("Audio unlocked async, state:", ctx.state);
       return true;
     } catch (e) {
       console.warn("Audio unlock failed:", e);

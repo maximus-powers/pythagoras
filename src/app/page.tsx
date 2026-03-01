@@ -21,7 +21,7 @@ export default function CommandBoard() {
   const [debugLog, setDebugLog] = useState<string[]>([]);
   const [showDebug, setShowDebug] = useState(false);
   const { isMarking, startMarking, trackingEnabled } = useAppStore();
-  const { playSequence, isAudioReady, isMuted, getDebugInfo, testBeep, testHtmlAudio } = useSoundEngine();
+  const { playSequence, isAudioReady, isMuted, getDebugInfo, testBeep, testHtmlAudio, unlockAudio } = useSoundEngine();
   const [audioDebug, setAudioDebug] = useState({ state: "unknown", sampleRate: 0, unlocked: false });
 
   const log = useCallback((msg: string) => {
@@ -57,6 +57,9 @@ export default function CommandBoard() {
   }, []);
 
   const handleCommandClick = useCallback(async (command: Command) => {
+    // CRITICAL: Call unlockAudio SYNCHRONOUSLY before any async work (required for iOS PWA)
+    unlockAudio();
+    
     log(`Tap: ${command.word}`);
     try {
       // Play the command sound
@@ -80,9 +83,12 @@ export default function CommandBoard() {
     } catch (err) {
       log(`Error: ${err}`);
     }
-  }, [startMarking, playSequence, trackingEnabled, log, getDebugInfo]);
+  }, [startMarking, playSequence, trackingEnabled, log, getDebugInfo, unlockAudio]);
 
   const handleMarkClick = useCallback(async (command: Command) => {
+    // CRITICAL: Call unlockAudio SYNCHRONOUSLY before any async work (required for iOS PWA)
+    unlockAudio();
+    
     log(`Mark tap: ${command.word}`);
     try {
       // Just play the sound for marks, no marking flow
@@ -93,7 +99,7 @@ export default function CommandBoard() {
     } catch (err) {
       log(`Mark error: ${err}`);
     }
-  }, [playSequence, log, getDebugInfo]);
+  }, [playSequence, log, getDebugInfo, unlockAudio]);
 
   const handleMarkingComplete = useCallback(() => {
     // Marking panel handles its own state, this is just for any additional cleanup
@@ -187,7 +193,7 @@ export default function CommandBoard() {
       {/* Debug panel */}
       {showDebug && (
         <div className="fixed bottom-32 right-4 left-4 z-50 p-3 bg-black/90 border border-purple-500 rounded-lg text-xs font-mono text-green-400 max-h-48 overflow-auto">
-          <div className="mb-2 text-purple-400">Debug Log (v6):</div>
+          <div className="mb-2 text-purple-400">Debug Log (v7 - sync unlock):</div>
           <div>Audio ready: {isAudioReady ? "yes" : "no"}</div>
           <div>Muted: {isMuted ? "yes" : "no"}</div>
           <div>Commands loaded: {commands.length}</div>
@@ -197,6 +203,7 @@ export default function CommandBoard() {
           <div className="mt-2 flex gap-2">
             <button
               onClick={async () => {
+                unlockAudio(); // Sync unlock first!
                 const result = await testBeep();
                 log(`WebAudio: ${result}`);
                 setAudioDebug(getDebugInfo());
@@ -207,6 +214,7 @@ export default function CommandBoard() {
             </button>
             <button
               onClick={async () => {
+                unlockAudio(); // Sync unlock first!
                 const result = await testHtmlAudio();
                 log(`${result}`);
               }}
