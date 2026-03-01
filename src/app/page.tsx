@@ -193,7 +193,7 @@ export default function CommandBoard() {
       {/* Debug panel */}
       {showDebug && (
         <div className="fixed bottom-32 right-4 left-4 z-50 p-3 bg-black/90 border border-purple-500 rounded-lg text-xs font-mono text-green-400 max-h-48 overflow-auto">
-          <div className="mb-2 text-purple-400">Debug Log (v7 - sync unlock):</div>
+          <div className="mb-2 text-purple-400">Debug Log (v8):</div>
           <div>Audio ready: {isAudioReady ? "yes" : "no"}</div>
           <div>Muted: {isMuted ? "yes" : "no"}</div>
           <div>Commands loaded: {commands.length}</div>
