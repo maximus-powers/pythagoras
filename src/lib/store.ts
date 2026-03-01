@@ -21,12 +21,17 @@ interface SettingsState {
   trackingEnabled: boolean;
 }
 
+interface SimulationState {
+  simulationEnabled: boolean;
+  simulatedDate: string | null; // ISO date string
+}
+
 interface SoundState {
   soundConfig: SoundConfig;
   isMuted: boolean;
 }
 
-interface AppState extends MarkingState, SessionState, SettingsState, SoundState {
+interface AppState extends MarkingState, SessionState, SettingsState, SoundState, SimulationState {
   // Marking actions
   startMarking: (command: Command, callId: string) => void;
   endMarking: () => void;
@@ -42,6 +47,10 @@ interface AppState extends MarkingState, SessionState, SettingsState, SoundState
   // Sound actions
   setSoundConfig: (config: Partial<SoundConfig>) => void;
   setMuted: (muted: boolean) => void;
+  
+  // Simulation actions
+  setSimulationEnabled: (enabled: boolean) => void;
+  setSimulatedDate: (date: string | null) => void;
 }
 
 const DEFAULT_SOUND_CONFIG: SoundConfig = {
@@ -72,6 +81,10 @@ export const useAppStore = create<AppState>()(
       // Sound state
       soundConfig: DEFAULT_SOUND_CONFIG,
       isMuted: false,
+      
+      // Simulation state
+      simulationEnabled: false,
+      simulatedDate: null,
 
       // Marking actions
       startMarking: (command, callId) =>
@@ -124,6 +137,19 @@ export const useAppStore = create<AppState>()(
         set({
           isMuted: muted,
         }),
+        
+      // Simulation actions
+      setSimulationEnabled: (enabled) =>
+        set({
+          simulationEnabled: enabled,
+          // Reset to null when disabling
+          simulatedDate: enabled ? new Date().toISOString() : null,
+        }),
+        
+      setSimulatedDate: (date) =>
+        set({
+          simulatedDate: date,
+        }),
     }),
     {
       name: "pythagoras-app-state",
@@ -133,6 +159,8 @@ export const useAppStore = create<AppState>()(
         trackingEnabled: state.trackingEnabled,
         soundConfig: state.soundConfig,
         isMuted: state.isMuted,
+        simulationEnabled: state.simulationEnabled,
+        simulatedDate: state.simulatedDate,
       }),
     }
   )

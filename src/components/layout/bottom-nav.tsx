@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, BarChart3, BookOpen } from "lucide-react";
+import { LayoutGrid, BarChart3, BookOpen, CalendarCheck } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Commands", icon: LayoutGrid },
+  { href: "/plan", label: "Plan", icon: CalendarCheck },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/vocabulary", label: "Vocabulary", icon: BookOpen },
 ];

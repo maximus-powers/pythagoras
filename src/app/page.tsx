@@ -53,6 +53,13 @@ export default function CommandBoard() {
     // Play the command sound
     await playSequence(command.sequence);
     
+    // Increment exposure count for training communication tracking
+    fetch("/api/commands/exposure", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commandId: command.id }),
+    }).catch(console.error);
+    
     // Only start marking flow if tracking is enabled
     if (trackingEnabled) {
       const callId = generateId();
