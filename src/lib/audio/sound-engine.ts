@@ -38,55 +38,53 @@ export class SoundEngine {
   }
 
   /**
-   * Create AudioContext synchronously - MUST be called from direct user gesture for PWA
-   */
-  ensureContextSync(): AudioContext {
-    if (!this.audioContext) {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      this.audioContext = new AudioContextClass();
-    }
-    return this.audioContext;
-  }
-
-  /**
-   * Just create the context and resume it - no unlock tone
-   */
-  unlockSync(): void {
-    try {
-      const ctx = this.ensureContextSync();
-      if (ctx.state === "suspended") {
-        ctx.resume();
-      }
-      this.unlocked = true;
-    } catch (e) {
-      console.warn("Sync unlock failed:", e);
-    }
-  }
-
-  /**
    * Get or create AudioContext, resuming if suspended
    */
   private async getContext(): Promise<AudioContext> {
-    const ctx = this.ensureContextSync();
+    if (!this.audioContext) {
+      // Use webkitAudioContext for older iOS Safari
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      this.audioContext = new AudioContextClass();
+    }
     
-    if (ctx.state === "suspended") {
+    // Always try to resume (required on iOS after suspend)
+    if (this.audioContext.state === "suspended") {
       try {
-        await ctx.resume();
+        await this.audioContext.resume();
       } catch (e) {
         console.warn("Failed to resume audio context:", e);
       }
     }
     
-    this.unlocked = true;
-    return ctx;
+    return this.audioContext;
   }
 
   /**
-   * Unlock audio on iOS - async version
+   * Unlock audio on iOS - call from user gesture
    */
   async unlock(): Promise<boolean> {
-    this.unlockSync();
-    return this.unlocked;
+    if (this.unlocked) return true;
+    
+    try {
+      const ctx = await this.getContext();
+      
+      // Play an audible test tone to unlock (silent buffers don't always work on iOS 17+)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 440;
+      gain.gain.value = 0.3;
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+      
+      this.unlocked = true;
+      console.log("Audio unlocked, context state:", ctx.state);
+      return true;
+    } catch (e) {
+      console.warn("Audio unlock failed:", e);
+      return false;
+    }
   }
 
   isReady(): boolean {

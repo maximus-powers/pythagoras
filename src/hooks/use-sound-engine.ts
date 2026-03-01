@@ -14,20 +14,13 @@ export function useSoundEngine() {
     engineRef.current.setConfig(soundConfig);
   }, [soundConfig]);
 
-  /**
-   * Call this SYNCHRONOUSLY at the start of any click/tap handler
-   * Required for iOS PWA audio to work
-   */
-  const unlockAudio = useCallback(() => {
-    engineRef.current.unlockSync();
-  }, []);
-
   const playSequence = useCallback(async (sequence: string) => {
     if (isMuted) return;
     
     try {
+      // Try to unlock audio on every play attempt (required for iOS)
       const engine = engineRef.current;
-      // Note: unlockSync should already be called by the tap handler
+      await engine.unlock();
       await engine.playSequence(sequence);
       
       // Update ready state after successful play
@@ -74,6 +67,5 @@ export function useSoundEngine() {
     getDebugInfo,
     testBeep,
     testHtmlAudio,
-    unlockAudio,
   };
 }
