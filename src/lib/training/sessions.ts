@@ -106,6 +106,8 @@ export interface SessionTemplate {
   activities: SessionActivity[];
   totalDuration: number; // calculated from activities
   prerequisites?: string[];
+  notes?: string[]; // Additional guidance, warnings, tips
+  weekRange?: [number, number]; // Optional: specific weeks this template is for (e.g., [1, 1] = week 1 only)
 }
 
 /**
@@ -113,7 +115,386 @@ export interface SessionTemplate {
  */
 export const SESSION_TEMPLATES: SessionTemplate[] = [
   // ============================================
-  // PHASE A: Foundation (weeks 1-8, puppy 8-16 weeks)
+  // WEEK 1: Arrival & Settling (puppy 8-9 weeks)
+  // Focus: Decompression, trust building, basic routines
+  // NOT about obedience - about helping puppy feel safe
+  // ============================================
+
+  {
+    id: "settle_a_arrival",
+    type: "enrichment",
+    name: "Arrival & Settling",
+    description: "Help puppy decompress after the big journey home - Day 1 priority",
+    objectives: ["socialization"],
+    phase: "phase_a",
+    weekRange: [1, 1],
+    activities: [
+      {
+        name: "Potty spot introduction",
+        description: "Carry puppy directly to designated potty spot. Wait quietly (up to 5 min). Mark and reward if they go.",
+        durationMinutes: 5,
+        objectives: ["socialization"],
+        tips: [
+          "Don't play yet - business first",
+          "Same spot every time builds habit",
+          "If no potty, try again in 15 min",
+        ],
+      },
+      {
+        name: "Limited home exploration",
+        description: "Allow puppy to sniff and explore ONE room at their pace. Stay calm and quiet. No carrying around.",
+        durationMinutes: 10,
+        objectives: ["socialization"],
+        tips: [
+          "Let them approach you",
+          "Watch for stress: hiding, whale eye, trembling",
+          "Resist urge to show them everything",
+        ],
+      },
+      {
+        name: "Calm presence",
+        description: "Sit on floor near puppy. Don't force interaction. Let them come to you for gentle pets.",
+        durationMinutes: 5,
+        objectives: ["relationship"],
+        tips: [
+          "Soft voice, slow movements",
+          "This is about trust, not training",
+          "Let puppy choose the interaction level",
+        ],
+      },
+    ],
+    totalDuration: 20,
+    notes: [
+      "DO NOT: Invite visitors over today",
+      "DO NOT: Introduce to other pets yet",
+      "DO NOT: Expect any obedience",
+      "DO NOT: Leave puppy alone for extended periods",
+      "DO NOT: Overwhelm with toys, treats, and attention",
+    ],
+  },
+
+  {
+    id: "settle_a_crate_intro",
+    type: "skill",
+    name: "Crate Love Building",
+    description: "Create positive crate association - NOT about duration yet",
+    objectives: ["obedience"],
+    phase: "phase_a",
+    weekRange: [1, 1],
+    activities: [
+      {
+        name: "Treat tosses",
+        description: "Toss high-value treats into crate. Let puppy go in, eat, come out freely. Door stays OPEN. 5-8 reps.",
+        durationMinutes: 2,
+        objectives: ["obedience"],
+        tips: [
+          "Never force or push puppy in",
+          "Crate = good things magically appear",
+          "Let them exit freely every time",
+        ],
+      },
+      {
+        name: "Meal in crate",
+        description: "Place food bowl inside crate. Puppy eats inside with door open. Stay nearby calmly.",
+        durationMinutes: 3,
+        objectives: ["obedience"],
+        tips: [
+          "If hesitant, place bowl at entrance first",
+          "Gradually move bowl deeper over meals",
+          "Don't close door during meals yet (Day 1-2)",
+        ],
+      },
+      {
+        name: "Brief door closure",
+        description: "After meal/treats, gently close door for 10-30 seconds while you sit RIGHT THERE. Open before any fussing.",
+        durationMinutes: 1,
+        objectives: ["obedience"],
+        tips: [
+          "Only start this on Day 2-3",
+          "Build up VERY slowly",
+          "If whining, wait for 2 sec of quiet before opening",
+        ],
+      },
+    ],
+    totalDuration: 6,
+    notes: [
+      "DO NOT: Lock puppy in for long periods yet",
+      "DO NOT: Use crate as punishment",
+      "DO NOT: Leave collar/tags on in crate (strangulation hazard)",
+      "Crate training takes 6+ months to solidify - patience!",
+    ],
+  },
+
+  {
+    id: "settle_a_potty",
+    type: "skill",
+    name: "Potty Foundations",
+    description: "Establish potty schedule and location - consistency is everything",
+    objectives: ["obedience"],
+    phase: "phase_a",
+    weekRange: [1, 1],
+    activities: [
+      {
+        name: "Scheduled potty trip",
+        description: "Take to potty spot: first thing AM, after meals, after naps, after play, before bed, every 2-3 hours.",
+        durationMinutes: 5,
+        objectives: ["obedience"],
+        tips: [
+          "Same spot every time",
+          "Say cue word ('go potty') WHILE they're going",
+          "Wait up to 5 min - no play until business done",
+        ],
+      },
+      {
+        name: "Reward success",
+        description: "The INSTANT puppy finishes, mark and reward with treat AND praise. Make it a party!",
+        durationMinutes: 1,
+        objectives: ["obedience"],
+        tips: [
+          "Timing critical - reward during/immediately after",
+          "Then playtime as additional reward",
+          "Be boring until they go, then celebrate",
+        ],
+      },
+      {
+        name: "Accident protocol",
+        description: "If accident inside: interrupt gently ('oops!'), carry to potty spot. Clean with enzymatic cleaner.",
+        durationMinutes: 2,
+        objectives: ["obedience"],
+        tips: [
+          "Accidents = YOUR management failure, not puppy's fault",
+          "Use enzymatic cleaner (Nature's Miracle, etc.)",
+          "Never use ammonia cleaners (smells like urine)",
+        ],
+      },
+    ],
+    totalDuration: 8,
+    notes: [
+      "DO NOT: Punish, scold, or rub nose in accidents",
+      "DO NOT: Expect puppy to 'tell you' they need to go",
+      "Bladder rule: ~1 hour per month of age (8 weeks = 2 hours max)",
+      "Expect 1-2 nighttime potty breaks for young puppies",
+    ],
+  },
+
+  {
+    id: "settle_a_handling",
+    type: "skill",
+    name: "Gentle Handling",
+    description: "Prepare puppy for vet visits, grooming, and general handling",
+    objectives: ["socialization"],
+    phase: "phase_a",
+    weekRange: [1, 1],
+    activities: [
+      {
+        name: "Paw touches",
+        description: "Touch paw briefly, immediately give treat. Repeat each paw 3x. Touch = treat starts, no touch = treat stops.",
+        durationMinutes: 2,
+        objectives: ["socialization"],
+        tips: [
+          "Very brief touches at first",
+          "Build up to holding paw for 1-2 seconds",
+          "If puppy pulls away, make it easier",
+        ],
+      },
+      {
+        name: "Ear and mouth check",
+        description: "Gently lift ear flap (treat), briefly look at teeth by lifting lip (treat). Just 2 reps each.",
+        durationMinutes: 1,
+        objectives: ["socialization"],
+        tips: [
+          "Don't restrain - keep it positive",
+          "This is conditioning, not examination",
+          "Speed and brevity are your friends",
+        ],
+      },
+      {
+        name: "Body handling",
+        description: "Run hands gently over body, touch tail, hold collar briefly. Continuous treat delivery throughout.",
+        durationMinutes: 1,
+        objectives: ["socialization"],
+        tips: [
+          "Watch for stress: squirming, whale eye, stops taking treats",
+          "If stressed, back off and make it easier",
+          "End while puppy still wants more",
+        ],
+      },
+    ],
+    totalDuration: 4,
+    notes: [
+      "DO NOT: Restrain a struggling puppy - make it easier instead",
+      "DO NOT: Do long sessions - 30 seconds to 2 minutes MAX",
+      "Start this on Day 3, not Day 1",
+      "Always end on success",
+    ],
+  },
+
+  {
+    id: "settle_a_name",
+    type: "skill",
+    name: "Name Game",
+    description: "Build strong name response - foundation for all future training",
+    objectives: ["obedience"],
+    phase: "phase_a",
+    weekRange: [1, 1],
+    activities: [
+      {
+        name: "Name = look at me",
+        description: "Say name ONCE in happy voice. The instant puppy looks, mark ('yes!') and treat. Do 10 reps.",
+        durationMinutes: 2,
+        objectives: ["obedience"],
+        tips: [
+          "Only say name ONCE per rep",
+          "Mark the head turn, not just eye contact",
+          "If no response, make kissy noise, then try name again",
+        ],
+      },
+      {
+        name: "Name from mild distraction",
+        description: "While puppy sniffs something boring, say name. Mark and reward the look. Just 5 reps.",
+        durationMinutes: 1,
+        objectives: ["obedience"],
+        tips: [
+          "Start with very mild distractions only",
+          "Don't compete with food or exciting toys yet",
+          "Set puppy up for success",
+        ],
+      },
+    ],
+    totalDuration: 3,
+    notes: [
+      "DO NOT: Repeat name multiple times (teaches to ignore it)",
+      "DO NOT: Use name for corrections (keep it 100% positive)",
+      "Start this on Day 4-5, not Day 1",
+      "Multiple short sessions (5 reps) throughout day beats one long session",
+    ],
+  },
+
+  {
+    id: "settle_a_sounds",
+    type: "enrichment",
+    name: "Sound Socialization",
+    description: "Introduce household sounds at low volume with positive associations",
+    objectives: ["socialization"],
+    phase: "phase_a",
+    weekRange: [1, 1],
+    activities: [
+      {
+        name: "Background sounds",
+        description: "Play TV or radio at low volume during meal or play time. Puppy learns normal household isn't scary.",
+        durationMinutes: 5,
+        objectives: ["socialization"],
+        tips: [
+          "Volume low enough that puppy ignores it",
+          "Pair with good things (food, play)",
+          "This is passive exposure - no active training",
+        ],
+      },
+      {
+        name: "Specific sound intro",
+        description: "One novel sound (doorbell video, vacuum from other room, pot clanging) at low volume. Treat throughout.",
+        durationMinutes: 2,
+        objectives: ["socialization"],
+        tips: [
+          "Start at lowest volume, increase gradually over days",
+          "If puppy reacts fearfully, increase distance / decrease volume",
+          "Let puppy investigate sound source at own pace",
+        ],
+      },
+    ],
+    totalDuration: 7,
+    notes: [
+      "DO NOT: Blast scary sounds to 'desensitize'",
+      "DO NOT: Comfort fearful puppy with soothing voice (reinforces fear)",
+      "BE: Calm, neutral, matter-of-fact when sounds happen",
+      "Start on Day 4-5 when puppy is more settled",
+    ],
+  },
+
+  {
+    id: "settle_a_surfaces",
+    type: "enrichment",
+    name: "Surface Exploration",
+    description: "Build confidence on different textures and surfaces at home",
+    objectives: ["socialization"],
+    phase: "phase_a",
+    weekRange: [1, 1],
+    activities: [
+      {
+        name: "Indoor surfaces",
+        description: "Let puppy explore different surfaces: tile, carpet, hardwood, rubber mat. Scatter treats to encourage.",
+        durationMinutes: 3,
+        objectives: ["socialization"],
+        tips: [
+          "Let puppy CHOOSE to approach",
+          "Scatter treats ON the surface",
+          "Don't place puppy on scary surface",
+        ],
+      },
+      {
+        name: "Novel objects",
+        description: "Place safe novel objects (cardboard box, crinkly paper bag, wobble board) and let puppy investigate freely.",
+        durationMinutes: 2,
+        objectives: ["socialization"],
+        tips: [
+          "Reward any interest or brave approach",
+          "Don't lure puppy onto scary things",
+          "Let curiosity win over fear naturally",
+        ],
+      },
+    ],
+    totalDuration: 5,
+    notes: [
+      "DO NOT: Place puppy on surface they're scared of",
+      "DO NOT: Flood with too many new things at once",
+      "Start on Day 4-5 when puppy is settled",
+      "Quality over quantity - one new thing done well beats five done poorly",
+    ],
+  },
+
+  {
+    id: "settle_a_relax",
+    type: "enrichment",
+    name: "Settling Practice",
+    description: "Teach puppy that calm behavior is rewarding - prevents demand barking and hyperactivity",
+    objectives: ["impulse_control"],
+    phase: "phase_a",
+    weekRange: [1, 1],
+    activities: [
+      {
+        name: "Capturing calm",
+        description: "When puppy naturally settles (lies down, sighs), quietly mark and place treat between paws. 5+ reps over time.",
+        durationMinutes: 5,
+        objectives: ["impulse_control"],
+        tips: [
+          "Don't excite them with praise - stay calm",
+          "Treat delivery should be boring and slow",
+          "You're rewarding a state of mind, not a position",
+        ],
+      },
+      {
+        name: "Mat introduction",
+        description: "Place mat/bed down. Any attention to it gets a treat tossed on it. Build to all four paws on, then lying down.",
+        durationMinutes: 3,
+        objectives: ["impulse_control"],
+        tips: [
+          "Don't lure onto mat - let them figure it out",
+          "Shape: look at mat → approach → sniff → paw on → lie down",
+          "This becomes 'place' command foundation",
+        ],
+      },
+    ],
+    totalDuration: 8,
+    notes: [
+      "This prevents future problems: demand barking, can't settle, always 'on'",
+      "Start on Day 3 when puppy has some comfort",
+      "Karen Overall's Relaxation Protocol is excellent for this",
+    ],
+  },
+
+  // ============================================
+  // PHASE A: Foundation (weeks 2-8, puppy 9-16 weeks)
+  // Standard foundation training begins Week 2
   // ============================================
   
   // Skill Sessions - Phase A
@@ -972,16 +1353,92 @@ export interface WeeklySessionSchedule {
 }
 
 /**
+ * Get Week 1 templates by ID
+ */
+function getWeek1Template(id: string): SessionTemplate | undefined {
+  return SESSION_TEMPLATES.find((t) => t.id === id);
+}
+
+/**
+ * Generate Week 1 schedule - special decompression/settling focus
+ * Based on veterinary behaviorist research
+ */
+function generateWeek1Schedule(): WeeklySessionSchedule {
+  // Week 1 daily schedule - carefully planned for decompression
+  // Day 1: Minimal - arrival and crate intro only
+  // Days 2-6: Gradually add sessions
+  // Day 7: Light day
+  
+  const week1DailyTemplates: string[][] = [
+    // Day 1: Just arrival/settling and crate intro (2 sessions)
+    ["settle_a_arrival", "settle_a_crate_intro"],
+    // Day 2: Crate and potty foundations (2 sessions)
+    ["settle_a_crate_intro", "settle_a_potty"],
+    // Day 3: Add handling (3 sessions)
+    ["settle_a_crate_intro", "settle_a_potty", "settle_a_handling"],
+    // Day 4: Name game and sounds (3 sessions)
+    ["settle_a_crate_intro", "settle_a_name", "settle_a_sounds"],
+    // Day 5: Handling and surfaces (3 sessions)
+    ["settle_a_potty", "settle_a_handling", "settle_a_surfaces"],
+    // Day 6: Name game and settling (3 sessions)
+    ["settle_a_name", "settle_a_relax", "settle_a_crate_intro"],
+    // Day 7: Light day - settling and surfaces (2 sessions)
+    ["settle_a_relax", "settle_a_surfaces"],
+  ];
+  
+  const dailyPlans: DailySessionPlan[] = week1DailyTemplates.map((templateIds, index) => {
+    const sessions = templateIds
+      .map((id) => getWeek1Template(id))
+      .filter((t): t is SessionTemplate => t !== undefined);
+    
+    return {
+      day: index + 1,
+      sessions,
+    };
+  });
+  
+  return {
+    weekNumber: 1,
+    phase: "phase_a",
+    sessionsPerDay: 2, // Average for Week 1
+    sessionDuration: { min: 3, max: 20 }, // Variable - some are longer settling sessions
+    dailyPlans,
+    notes: [
+      "WEEK 1 FOCUS: Decompression and trust building - NOT obedience",
+      "This is about helping puppy feel safe in their new home",
+      "No visitors for the first few days",
+      "Let puppy set the pace - don't overwhelm",
+      "Potty schedule is critical: after meals, naps, play, and every 2-3 hours",
+      "Crate training is a marathon, not a sprint",
+      "Watch for stress signs: whale eye, hiding, trembling, refusing treats",
+    ],
+  };
+}
+
+/**
  * Generate a balanced weekly session schedule
  */
 export function generateWeeklySessionSchedule(
   weekNumber: number,
   aggressiveness: number = 3
 ): WeeklySessionSchedule {
+  // Week 1 is special - decompression/settling focus
+  if (weekNumber === 1) {
+    return generateWeek1Schedule();
+  }
+  
   const phase = getPhaseForWeek(weekNumber);
   const params = SESSION_PARAMS_BY_PHASE[phase];
   const sessionsPerDay = getSessionsPerDay(params.sessionsPerDay, aggressiveness);
-  const templates = getTemplatesForPhase(phase);
+  
+  // For Phase A weeks 2-8, exclude Week 1 templates (those with weekRange [1,1])
+  const templates = getTemplatesForPhase(phase).filter((t) => {
+    if (t.weekRange) {
+      const [minWeek, maxWeek] = t.weekRange;
+      return weekNumber >= minWeek && weekNumber <= maxWeek;
+    }
+    return true; // No weekRange means available for all weeks in phase
+  });
   
   // Count templates by type
   const byType = templates.reduce((acc, t) => {
