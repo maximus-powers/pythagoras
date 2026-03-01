@@ -216,19 +216,25 @@ export default function CommandBoard() {
             </button>
             <button
               onClick={() => {
-                // Completely synchronous - no awaits at all
+                // Create context and immediately resume
                 try {
                   const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
                   const ctx = new AC();
-                  const osc = ctx.createOscillator();
-                  const gain = ctx.createGain();
-                  osc.frequency.value = 440;
-                  gain.gain.value = 1;
-                  osc.connect(gain);
-                  gain.connect(ctx.destination);
-                  osc.start();
-                  osc.stop(ctx.currentTime + 0.5);
-                  log(`SYNC: ctx=${ctx.state}, baseLatency=${ctx.baseLatency}`);
+                  
+                  // Resume and play after resume completes
+                  ctx.resume().then(() => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.frequency.value = 440;
+                    gain.gain.value = 1;
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.5);
+                    log(`SYNC+RESUME: ctx=${ctx.state}, playing 440Hz`);
+                  });
+                  
+                  log(`SYNC: created ctx=${ctx.state}, resuming...`);
                 } catch (e) {
                   log(`SYNC ERR: ${e}`);
                 }
