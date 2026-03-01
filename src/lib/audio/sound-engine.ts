@@ -68,12 +68,15 @@ export class SoundEngine {
     try {
       const ctx = await this.getContext();
       
-      // Play a silent buffer to unlock
-      const buffer = ctx.createBuffer(1, 1, 22050);
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      source.start(0);
+      // Play an audible test tone to unlock (silent buffers don't always work on iOS 17+)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 440;
+      gain.gain.value = 0.3;
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
       
       this.unlocked = true;
       console.log("Audio unlocked, context state:", ctx.state);
@@ -97,6 +100,33 @@ export class SoundEngine {
       sampleRate: this.audioContext?.sampleRate ?? 0,
       unlocked: this.unlocked,
     };
+  }
+
+  /**
+   * Play a simple test beep - for debugging
+   */
+  async testBeep(): Promise<string> {
+    try {
+      const ctx = await this.getContext();
+      
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = "sine";
+      osc.frequency.value = 880; // A5 - easy to hear
+      gain.gain.value = 1.0; // Max volume
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      const startTime = ctx.currentTime;
+      osc.start(startTime);
+      osc.stop(startTime + 0.5); // Half second beep
+      
+      return `OK: ctx=${ctx.state}, dest=${ctx.destination.channelCount}ch, time=${startTime.toFixed(2)}`;
+    } catch (e) {
+      return `ERR: ${e}`;
+    }
   }
 
   setConfig(config: Partial<SoundConfig>) {
@@ -190,11 +220,8 @@ export class SoundEngine {
           osc.frequency.value = frequency;
           osc.connect(gainNode);
           
-          // Quick attack, sustain, quick release
-          gainNode.gain.setValueAtTime(0, now);
-          gainNode.gain.linearRampToValueAtTime(0.5, now + 0.005);
-          gainNode.gain.setValueAtTime(0.5, now + durationSec - 0.01);
-          gainNode.gain.linearRampToValueAtTime(0, now + durationSec);
+          // Simple loud beep - no fancy envelope (iOS compatibility)
+          gainNode.gain.value = 1.0;
           
           osc.start(now);
           osc.stop(now + durationSec);

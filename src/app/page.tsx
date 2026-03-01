@@ -21,7 +21,7 @@ export default function CommandBoard() {
   const [debugLog, setDebugLog] = useState<string[]>([]);
   const [showDebug, setShowDebug] = useState(false);
   const { isMarking, startMarking, trackingEnabled } = useAppStore();
-  const { playSequence, isAudioReady, isMuted, getDebugInfo } = useSoundEngine();
+  const { playSequence, isAudioReady, isMuted, getDebugInfo, testBeep } = useSoundEngine();
   const [audioDebug, setAudioDebug] = useState({ state: "unknown", sampleRate: 0, unlocked: false });
 
   const log = useCallback((msg: string) => {
@@ -187,13 +187,23 @@ export default function CommandBoard() {
       {/* Debug panel */}
       {showDebug && (
         <div className="fixed bottom-32 right-4 left-4 z-50 p-3 bg-black/90 border border-purple-500 rounded-lg text-xs font-mono text-green-400 max-h-48 overflow-auto">
-          <div className="mb-2 text-purple-400">Debug Log (v4):</div>
+          <div className="mb-2 text-purple-400">Debug Log (v5):</div>
           <div>Audio ready: {isAudioReady ? "yes" : "no"}</div>
           <div>Muted: {isMuted ? "yes" : "no"}</div>
           <div>Commands loaded: {commands.length}</div>
           <div className={audioDebug.state === "running" ? "text-green-400" : "text-red-400"}>
             AudioContext: {audioDebug.state} | {audioDebug.sampleRate}Hz | unlocked: {audioDebug.unlocked ? "yes" : "no"}
           </div>
+          <button
+            onClick={async () => {
+              const result = await testBeep();
+              log(`TestBeep: ${result}`);
+              setAudioDebug(getDebugInfo());
+            }}
+            className="mt-2 px-3 py-1 bg-purple-600 text-white rounded text-xs"
+          >
+            TEST BEEP (880Hz)
+          </button>
           <div className="mt-2 border-t border-purple-500/50 pt-2">
             {debugLog.length === 0 ? (
               <div className="text-gray-500">No events yet - tap a button</div>
