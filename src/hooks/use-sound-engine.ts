@@ -52,6 +52,10 @@ export function useSoundEngine() {
     return engineRef.current.testBeep();
   }, []);
 
+  const testHtmlAudio = useCallback(async () => {
+    return engineRef.current.testHtmlAudio();
+  }, []);
+
   return {
     playSequence,
     stop,
@@ -62,5 +66,6 @@ export function useSoundEngine() {
     isAudioReady,
     getDebugInfo,
     testBeep,
+    testHtmlAudio,
   };
 }

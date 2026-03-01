@@ -103,7 +103,7 @@ export class SoundEngine {
   }
 
   /**
-   * Play a simple test beep - for debugging
+   * Play a simple test beep - for debugging (Web Audio API)
    */
   async testBeep(): Promise<string> {
     try {
@@ -127,6 +127,52 @@ export class SoundEngine {
     } catch (e) {
       return `ERR: ${e}`;
     }
+  }
+
+  /**
+   * Test using HTML5 Audio element - alternative approach for iOS
+   */
+  async testHtmlAudio(): Promise<string> {
+    try {
+      // Base64 encoded WAV file: 440Hz sine wave, 0.5 seconds
+      const wavBase64 = "UklGRl4lAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YTolAAA" + 
+        this.generateSineWaveBase64(440, 0.5);
+      
+      const audio = new Audio(`data:audio/wav;base64,${wavBase64}`);
+      audio.volume = 1.0;
+      
+      return new Promise((resolve) => {
+        audio.onended = () => resolve("HTML Audio: played successfully");
+        audio.onerror = (e) => resolve(`HTML Audio error: ${e}`);
+        audio.play()
+          .then(() => resolve("HTML Audio: play() succeeded"))
+          .catch((e) => resolve(`HTML Audio play() failed: ${e}`));
+      });
+    } catch (e) {
+      return `HTML Audio ERR: ${e}`;
+    }
+  }
+
+  /**
+   * Generate base64 encoded PCM data for a sine wave
+   */
+  private generateSineWaveBase64(freq: number, durationSec: number): string {
+    const sampleRate = 44100;
+    const numSamples = Math.floor(sampleRate * durationSec);
+    const buffer = new Int16Array(numSamples);
+    
+    for (let i = 0; i < numSamples; i++) {
+      const t = i / sampleRate;
+      buffer[i] = Math.floor(Math.sin(2 * Math.PI * freq * t) * 32767 * 0.8);
+    }
+    
+    // Convert to base64
+    const bytes = new Uint8Array(buffer.buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
   }
 
   setConfig(config: Partial<SoundConfig>) {

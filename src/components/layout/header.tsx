@@ -115,7 +115,7 @@ export function Header({ showSettingsToggle, isSettingsOpen, onSettingsToggle }:
         <div className="flex items-center justify-between h-14 px-4 max-w-lg mx-auto">
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold">Pythagoras</h1>
-            <span className="text-[10px] text-muted-foreground">v5</span>
+            <span className="text-[10px] text-muted-foreground">v6</span>
             {simulationEnabled && (
               <Badge variant="outline" className="gap-1 text-purple-500 border-purple-500">
                 <FlaskConical className="h-3 w-3" />
