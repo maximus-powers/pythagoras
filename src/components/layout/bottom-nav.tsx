@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, BarChart3, BookOpen, CalendarCheck } from "lucide-react";
+import { Dog, GitBranch, LayoutGrid, BookOpen } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Commands", icon: LayoutGrid },
-  { href: "/plan", label: "Plan", icon: CalendarCheck },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/tree", label: "Tree", icon: GitBranch },
   { href: "/vocabulary", label: "Vocabulary", icon: BookOpen },
+  { href: "/profile", label: "Profile", icon: Dog },
 ];
 
 export function BottomNav() {

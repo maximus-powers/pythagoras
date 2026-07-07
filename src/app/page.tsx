@@ -9,6 +9,7 @@ import { MarkingPanel } from "@/components/marking/marking-panel";
 import { QuickSettings } from "@/components/settings/quick-settings";
 import { Button } from "@/components/ui/button";
 import { SequenceDisplayInline } from "@/components/ui/sequence-display";
+import { sortCommandsByTree } from "@/lib/commands/tree-order";
 import { useAppStore } from "@/lib/store";
 import { useSoundEngine } from "@/hooks/use-sound-engine";
 import { generateId } from "@/lib/utils";
@@ -27,15 +28,32 @@ export default function CommandBoard() {
     setDebugLog(prev => [...prev.slice(-9), `${new Date().toLocaleTimeString()}: ${msg}`]);
   }, []);
 
-  // Separate marks from other commands
-  const { marks, otherCommands } = useMemo(() => {
-    const marks = commands.filter((c) => c.parentFamily === "Marks");
-    const otherCommands = commands.filter((c) => c.parentFamily !== "Marks");
-    return { marks, otherCommands };
-  }, [commands]);
+  const { positiveMarks, negativeMarks, otherCommands } = useMemo(() => {
+    const positive: Command[] = [];
+    const negative: Command[] = [];
+    const regular: Command[] = [];
 
-  const positiveMarks = marks.filter((m) => m.family === "Positive").sort((a, b) => a.sequence.localeCompare(b.sequence));
-  const negativeMarks = marks.filter((m) => m.family === "Negative").sort((a, b) => a.sequence.localeCompare(b.sequence));
+    for (const command of commands) {
+      const searchable = command.word.toLowerCase();
+      const isMark = searchable.includes("mark");
+      const isPositive = searchable.includes("positive") || searchable.includes("yes") || searchable.includes("good");
+      const isNegative = searchable.includes("negative") || searchable.includes("no") || searchable.includes("bad");
+
+      if (isMark && isPositive) {
+        positive.push(command);
+      } else if (isMark && isNegative) {
+        negative.push(command);
+      } else {
+        regular.push(command);
+      }
+    }
+
+    return {
+      positiveMarks: sortCommandsByTree(positive),
+      negativeMarks: sortCommandsByTree(negative),
+      otherCommands: regular,
+    };
+  }, [commands]);
 
   useEffect(() => {
     async function fetchCommands() {
@@ -60,14 +78,7 @@ export default function CommandBoard() {
     try {
       await playSequence(command.sequence);
       log(`Played: ${command.sequence}`);
-      
-      // Increment exposure count for training communication tracking
-      fetch("/api/commands/exposure", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ commandId: command.id }),
-      }).catch(console.error);
-      
+
       // Only start marking flow if tracking is enabled
       if (trackingEnabled) {
         const callId = generateId();
@@ -129,7 +140,7 @@ export default function CommandBoard() {
         ) : (
           <>
             {/* Marks at the top - side by side */}
-            {marks.length > 0 && (
+            {(positiveMarks.length > 0 || negativeMarks.length > 0) && (
               <div className="mb-4">
                 <div className="grid grid-cols-2 gap-3">
                   {positiveMarks.map((mark) => (

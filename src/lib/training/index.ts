@@ -1,9 +1,5 @@
 /**
- * Training plan utilities
- * Export all training-related functions and types
+ * Dog age utilities.
  */
 
 export * from "./age";
-export * from "./mastery";
-export * from "./unit-generator";
-export * from "./socialization";

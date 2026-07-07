@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, trainingRecords, commands } from "@/lib/db";
-import { desc, eq, gte, lte, and, sql } from "drizzle-orm";
+import { desc, eq, gte, lte, and } from "drizzle-orm";
 
 export async function GET(request: Request) {
   try {

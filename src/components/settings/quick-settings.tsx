@@ -55,7 +55,7 @@ export function QuickSettings({ isOpen }: QuickSettingsProps) {
         {/* Silence Duration */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-xs text-muted-foreground">Silence "0"</Label>
+            <Label className="text-xs text-muted-foreground">Silence &quot;0&quot;</Label>
             <span className="text-xs text-muted-foreground">{config.silenceDurationMs}ms</span>
           </div>
           <Slider

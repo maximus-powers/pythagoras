@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SequenceDisplay } from "@/components/ui/sequence-display";
 import { useAppStore } from "@/lib/store";
 import { useSoundEngine } from "@/hooks/use-sound-engine";
-import { formatDuration, generateId } from "@/lib/utils";
-import type { Command } from "@/lib/db/schema";
+import { formatDuration } from "@/lib/utils";
 
 interface MarkingPanelProps {
   onComplete: () => void;

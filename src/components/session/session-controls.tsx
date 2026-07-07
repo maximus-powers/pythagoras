@@ -134,7 +134,7 @@ export function SessionControls({ onSessionStart, onSessionEnd }: SessionControl
           <DialogHeader>
             <DialogTitle>End Training Session?</DialogTitle>
             <DialogDescription>
-              Your session data will be saved for analytics.
+              Your session marks will be saved.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 mt-4">

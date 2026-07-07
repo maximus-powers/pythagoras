@@ -9,77 +9,46 @@ const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle(sql);
 
 const initialCommands = [
-  // Marks
-  { word: "Yes/Good/Mark", sequence: "..", parentFamily: "Marks", family: "Positive", description: "Positive reinforcement mark" },
-  { word: "No/Bad/Mark", sequence: "...", parentFamily: "Marks", family: "Negative", description: "Negative mark" },
-  
-  // Question
-  { word: "What?", sequence: ".0.", parentFamily: "Question", family: null, description: "I don't understand" },
-  
-  // Names
-  { word: "Max", sequence: "__.", parentFamily: "Names", family: null, description: "Owner's name" },
-  { word: "Pythagoras", sequence: "._..", parentFamily: "Names", family: null, description: "Dog's name" },
-  
-  // Temporal
-  { word: "Now", sequence: "..0..", parentFamily: "Temporal", family: null, description: "Immediate timing" },
-  { word: "Later", sequence: "..0...", parentFamily: "Temporal", family: null, description: "Future timing" },
-  
-  // Commands - Core
-  { word: "Driving", sequence: "_", parentFamily: "Command", family: null, description: "Listen to me / attention" },
-  { word: "Release", sequence: "__..", parentFamily: "Command", family: null, description: "Free / play time" },
-  
-  // Commands - Stationary
-  { word: "Place/Stay", sequence: "_.", parentFamily: "Command", family: "Stationary", description: "Stay in place" },
-  { word: "Sit", sequence: "_.0.", parentFamily: "Command", family: "Stationary", description: "Sit down" },
-  { word: "Down", sequence: "_.0_", parentFamily: "Command", family: "Stationary", description: "Lie down" },
-  
-  // Commands - Movement
-  { word: "Move/Go", sequence: "__", parentFamily: "Command", family: "Movement", description: "Start moving" },
-  { word: "Come", sequence: "__.", parentFamily: "Command", family: "Movement", description: "Come to me" },
-  { word: "Heel", sequence: "__._", parentFamily: "Command", family: "Movement", description: "Walk beside me" },
-  { word: "Leave it", sequence: "__...", parentFamily: "Command", family: "Movement", description: "Leave it alone" },
-  
-  // Commands - Communication
-  { word: "Touch", sequence: "_0.", parentFamily: "Command", family: "Communication", description: "Touch with nose" },
-  { word: "Bark", sequence: "_0_", parentFamily: "Command", family: "Communication", description: "Bark on command" },
-  { word: "Growl", sequence: "_0_0_", parentFamily: "Command", family: "Communication", description: "Growl on command" },
-  
-  // Nouns - Outside
-  { word: "Outside", sequence: "._", parentFamily: "Nouns", family: "Outside", description: "Going outside" },
-  { word: "Park", sequence: "._.", parentFamily: "Nouns", family: "Outside", description: "Going to park" },
-  { word: "Pee", sequence: ".__", parentFamily: "Nouns", family: "Outside", description: "Bathroom - pee" },
-  { word: "Poop", sequence: ".__.", parentFamily: "Nouns", family: "Outside", description: "Bathroom - poop" },
-  
-  // Nouns - Inside
-  { word: "Inside/Home", sequence: ".0_", parentFamily: "Nouns", family: "Inside", description: "Going inside" },
-  { word: "Crate", sequence: ".0__", parentFamily: "Nouns", family: "Inside", description: "Go to crate" },
-  
-  // Nouns - Sustenance
-  { word: "Food", sequence: ".._", parentFamily: "Nouns", family: "Sustenance", description: "Food time" },
-  { word: "Water", sequence: ".._.", parentFamily: "Nouns", family: "Sustenance", description: "Water time" },
-  { word: "Treat", sequence: "..__", parentFamily: "Nouns", family: "Sustenance", description: "Treat/reward" },
-  
-  // Nouns - Play Objects
-  { word: "Toy", sequence: "._._", parentFamily: "Nouns", family: "Play Objects", description: "Toy" },
-  { word: "Ball", sequence: "._._.", parentFamily: "Nouns", family: "Play Objects", description: "Ball" },
-  
-  // Modifiers
-  { word: "Want", sequence: "_..", parentFamily: "Modifiers", family: null, description: "Request modifier - I want" },
-  { word: "Done", sequence: "..0_", parentFamily: "Modifiers", family: null, description: "Completion modifier - finished" },
-  { word: "More", sequence: "_._", parentFamily: "Modifiers", family: null, description: "Quantity modifier - more please" },
-  
-  // Activities (Outdoor)
-  { word: "Play", sequence: "._0.", parentFamily: "Nouns", family: "Outside", description: "Play time" },
-  { word: "Walk", sequence: "._0_", parentFamily: "Nouns", family: "Outside", description: "Go for a walk" },
-  { word: "Car", sequence: "._0__", parentFamily: "Nouns", family: "Outside", description: "Car ride" },
-  
-  // Nouns - Inside (additions)
-  { word: "Bed", sequence: ".0_.", parentFamily: "Nouns", family: "Inside", description: "Bed / sleep" },
-  
-  // Feelings/Urgent
-  { word: "Help", sequence: "_0__", parentFamily: "Feelings", family: null, description: "Need help / something wrong" },
-  { word: "Hurt", sequence: "_0__.", parentFamily: "Feelings", family: null, description: "In pain / uncomfortable" },
-  { word: "Scared", sequence: "_0..", parentFamily: "Feelings", family: null, description: "Anxious / frightened" },
+  { word: "Yes/Good/Mark", sequence: "..", description: "Positive reinforcement mark" },
+  { word: "No/Bad/Mark", sequence: "...", description: "Negative mark" },
+  { word: "What?", sequence: ".0.", description: "I don't understand" },
+  { word: "Max", sequence: "__.", description: "Owner's name" },
+  { word: "Pythagoras", sequence: "._..", description: "Dog's name" },
+  { word: "Now", sequence: "..0..", description: "Immediate timing" },
+  { word: "Later", sequence: "..0...", description: "Future timing" },
+  { word: "Driving", sequence: "_", description: "Listen to me / attention" },
+  { word: "Release", sequence: "__..", description: "Free / play time" },
+  { word: "Place/Stay", sequence: "_.", description: "Stay in place" },
+  { word: "Sit", sequence: "_.0.", description: "Sit down" },
+  { word: "Down", sequence: "_.0_", description: "Lie down" },
+  { word: "Move/Go", sequence: "__", description: "Start moving" },
+  { word: "Come", sequence: "__.", description: "Come to me" },
+  { word: "Heel", sequence: "__._", description: "Walk beside me" },
+  { word: "Leave it", sequence: "__...", description: "Leave it alone" },
+  { word: "Touch", sequence: "_0.", description: "Touch with nose" },
+  { word: "Bark", sequence: "_0_", description: "Bark on command" },
+  { word: "Growl", sequence: "_0_0_", description: "Growl on command" },
+  { word: "Outside", sequence: "._", description: "Going outside" },
+  { word: "Park", sequence: "._.", description: "Going to park" },
+  { word: "Pee", sequence: ".__", description: "Bathroom - pee" },
+  { word: "Poop", sequence: ".__.", description: "Bathroom - poop" },
+  { word: "Inside/Home", sequence: ".0_", description: "Going inside" },
+  { word: "Crate", sequence: ".0__", description: "Go to crate" },
+  { word: "Food", sequence: ".._", description: "Food time" },
+  { word: "Water", sequence: ".._.", description: "Water time" },
+  { word: "Treat", sequence: "..__", description: "Treat/reward" },
+  { word: "Toy", sequence: "._._", description: "Toy" },
+  { word: "Ball", sequence: "._._.", description: "Ball" },
+  { word: "Want", sequence: "_..", description: "Request modifier - I want" },
+  { word: "Done", sequence: "..0_", description: "Completion modifier - finished" },
+  { word: "More", sequence: "_._", description: "Quantity modifier - more please" },
+  { word: "Play", sequence: "._0.", description: "Play time" },
+  { word: "Walk", sequence: "._0_", description: "Go for a walk" },
+  { word: "Car", sequence: "._0__", description: "Car ride" },
+  { word: "Bed", sequence: ".0_.", description: "Bed / sleep" },
+  { word: "Help", sequence: "_0__", description: "Need help / something wrong" },
+  { word: "Hurt", sequence: "_0__.", description: "In pain / uncomfortable" },
+  { word: "Scared", sequence: "_0..", description: "Anxious / frightened" },
 ];
 
 const defaultSoundSettings = {

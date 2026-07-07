@@ -1,6 +1,6 @@
 "use client";
 
-import { Volume2, VolumeX, Play, Square, ClipboardList, ClipboardX, Settings, Dog, FlaskConical, X } from "lucide-react";
+import { Volume2, VolumeX, Play, Square, ClipboardList, ClipboardX, Settings, Dog } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,14 +26,10 @@ export function Header({ showSettingsToggle, isSettingsOpen, onSettingsToggle }:
   const { isMuted, toggleMute } = useSoundEngine();
   const { 
     currentSession, 
-    isPracticeMode, 
     trackingEnabled, 
     setTrackingEnabled,
     startSession,
     endSession,
-    simulationEnabled,
-    simulatedDate,
-    setSimulationEnabled,
   } = useAppStore();
   const [elapsed, setElapsed] = useState(0);
   const [isEndDialogOpen, setIsEndDialogOpen] = useState(false);
@@ -41,7 +37,6 @@ export function Header({ showSettingsToggle, isSettingsOpen, onSettingsToggle }:
 
   useEffect(() => {
     if (!currentSession) {
-      setElapsed(0);
       return;
     }
 
@@ -107,20 +102,12 @@ export function Header({ showSettingsToggle, isSettingsOpen, onSettingsToggle }:
     }
   };
 
-  const simDate = simulatedDate ? new Date(simulatedDate) : null;
-  
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between h-14 px-4 max-w-lg mx-auto">
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold">Pythagoras</h1>
-            {simulationEnabled && (
-              <Badge variant="outline" className="gap-1 text-purple-500 border-purple-500">
-                <FlaskConical className="h-3 w-3" />
-                Sim
-              </Badge>
-            )}
             {currentSession && (
               <Badge variant="secondary" className="gap-1">
                 {formatDuration(elapsed)}
@@ -192,42 +179,13 @@ export function Header({ showSettingsToggle, isSettingsOpen, onSettingsToggle }:
         </div>
       </header>
 
-      {/* Simulation mode banner */}
-      {simulationEnabled && simDate && (
-        <div className="sticky top-14 z-30 bg-purple-500/10 border-b border-purple-500/30 backdrop-blur">
-          <div className="flex items-center justify-between h-10 px-4 max-w-lg mx-auto">
-            <div className="flex items-center gap-2 text-sm">
-              <FlaskConical className="h-4 w-4 text-purple-500" />
-              <span className="text-purple-400 font-medium">
-                {simDate.toLocaleDateString("en-US", { 
-                  month: "short", 
-                  day: "numeric", 
-                  year: "numeric" 
-                })}
-              </span>
-              <span className="text-muted-foreground">
-                (simulated)
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-purple-400 hover:text-purple-300"
-              onClick={() => setSimulationEnabled(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* End session confirmation */}
       <Dialog open={isEndDialogOpen} onOpenChange={setIsEndDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>End Training Session?</DialogTitle>
             <DialogDescription>
-              Your session data will be saved for analytics.
+              Your session marks will be saved.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 mt-4">

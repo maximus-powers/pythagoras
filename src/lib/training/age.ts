@@ -1,6 +1,5 @@
 /**
- * Age calculations, developmental stages, and fear period detection
- * for the training plan system.
+ * Age calculations, developmental stages, and fear period detection.
  */
 
 export type DevelopmentalStage =

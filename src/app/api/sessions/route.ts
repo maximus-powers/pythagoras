@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, trainingSessions } from "@/lib/db";
-import { desc, isNull } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 
 export async function GET() {
   try {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Plus, Pencil, Trash2, Play } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -21,39 +21,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useSoundEngine } from "@/hooks/use-sound-engine";
+import { groupCommandsByTree } from "@/lib/commands/tree-order";
 import { toast } from "sonner";
 import type { Command } from "@/lib/db/schema";
-
-const PARENT_FAMILIES = [
-  "Marks",
-  "Question",
-  "Names",
-  "Temporal",
-  "Command",
-  "Nouns",
-  "Modifiers",
-  "Feelings",
-];
-
-const FAMILIES: Record<string, string[]> = {
-  Marks: ["Positive", "Negative"],
-  Command: ["Stationary", "Movement", "Communication"],
-  Nouns: ["Outside", "Inside", "Sustenance", "Play Objects"],
-};
-
-interface GroupedCommands {
-  [parentFamily: string]: {
-    [family: string]: Command[];
-  };
-}
 
 export default function VocabularyPage() {
   const [commands, setCommands] = useState<Command[]>([]);
@@ -66,8 +37,6 @@ export default function VocabularyPage() {
   // Form state
   const [word, setWord] = useState("");
   const [sequence, setSequence] = useState("");
-  const [parentFamily, setParentFamily] = useState("");
-  const [family, setFamily] = useState("");
   const [description, setDescription] = useState("");
 
   const fetchCommands = useCallback(async () => {
@@ -86,14 +55,12 @@ export default function VocabularyPage() {
   }, []);
 
   useEffect(() => {
-    fetchCommands();
+    void Promise.resolve().then(fetchCommands);
   }, [fetchCommands]);
 
   const resetForm = () => {
     setWord("");
     setSequence("");
-    setParentFamily("");
-    setFamily("");
     setDescription("");
     setEditingCommand(null);
   };
@@ -107,15 +74,13 @@ export default function VocabularyPage() {
     setEditingCommand(command);
     setWord(command.word);
     setSequence(command.sequence);
-    setParentFamily(command.parentFamily);
-    setFamily(command.family || "");
     setDescription(command.description || "");
     setIsDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!word || !sequence || !parentFamily) {
+    if (!word || !sequence) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -126,8 +91,6 @@ export default function VocabularyPage() {
       const payload = {
         word,
         sequence,
-        parentFamily,
-        family: family || null,
         description: description || null,
       };
 
@@ -187,18 +150,7 @@ export default function VocabularyPage() {
     await playSequence(sequence);
   };
 
-  // Group commands, sorted by sequence (lexicographic - groups prefixes together, shorter first)
-  const grouped: GroupedCommands = {};
-  const sorted = [...commands].sort((a, b) => a.sequence.localeCompare(b.sequence));
-  for (const cmd of sorted) {
-    const pf = cmd.parentFamily;
-    const f = cmd.family || "_none_";
-    if (!grouped[pf]) grouped[pf] = {};
-    if (!grouped[pf][f]) grouped[pf][f] = [];
-    grouped[pf][f].push(cmd);
-  }
-
-  const availableFamilies = FAMILIES[parentFamily] || [];
+  const grouped = useMemo(() => groupCommandsByTree(commands), [commands]);
 
   return (
     <div className="min-h-screen pb-20">
@@ -226,22 +178,32 @@ export default function VocabularyPage() {
             </Button>
           </div>
         ) : (
-          <Accordion type="multiple" defaultValue={Object.keys(grouped)} className="w-full">
-            {Object.entries(grouped).map(([pf, families]) => (
-              <AccordionItem key={pf} value={pf}>
+          <Accordion
+            type="multiple"
+            defaultValue={grouped.groups.map((group) => group.key)}
+            className="w-full"
+          >
+            {grouped.groups.map((parentGroup) => (
+              <AccordionItem key={parentGroup.key} value={parentGroup.key}>
                 <AccordionTrigger className="text-sm font-semibold">
-                  {pf}
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono">{parentGroup.prefix || "root"}</span>
+                    {parentGroup.prefix && (
+                      <SequenceDisplay sequence={parentGroup.prefix} size="sm" />
+                    )}
+                  </span>
                 </AccordionTrigger>
                 <AccordionContent>
-                  {Object.entries(families).map(([fam, cmds]) => (
-                    <div key={fam} className="mb-4 last:mb-0">
-                      {fam !== "_none_" && (
-                        <h4 className="text-xs font-medium text-muted-foreground mb-2 px-1">
-                          {fam}
+                  {parentGroup.childGroups.map((childGroup) => (
+                    <div key={childGroup.key} className="mb-4 last:mb-0">
+                      {!childGroup.isDirect && (
+                        <h4 className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center gap-2">
+                          <span className="font-mono">{childGroup.prefix}</span>
+                          <SequenceDisplay sequence={childGroup.prefix} size="sm" />
                         </h4>
                       )}
                       <div className="space-y-2">
-                        {cmds.map((cmd) => (
+                        {childGroup.commands.map((cmd) => (
                           <div
                             key={cmd.id}
                             className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border"
@@ -334,41 +296,6 @@ export default function VocabularyPage() {
                 </Button>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="parentFamily">Parent Family *</Label>
-              <Select value={parentFamily} onValueChange={setParentFamily} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select parent family" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PARENT_FAMILIES.map((pf) => (
-                    <SelectItem key={pf} value={pf}>
-                      {pf}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {availableFamilies.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="family">Family</Label>
-                <Select value={family || "_none_"} onValueChange={(v) => setFamily(v === "_none_" ? "" : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select family (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none_">None</SelectItem>
-                    {availableFamilies.map((f) => (
-                      <SelectItem key={f} value={f}>
-                        {f}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>

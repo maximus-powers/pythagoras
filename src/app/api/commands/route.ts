@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { db, commands } from "@/lib/db";
-import { eq } from "drizzle-orm";
 
 export async function GET() {
   try {
-    const allCommands = await db.select().from(commands).orderBy(commands.parentFamily, commands.family, commands.word);
+    const allCommands = await db.select().from(commands).orderBy(commands.sequence, commands.word);
     return NextResponse.json(allCommands);
   } catch (error) {
     console.error("Failed to fetch commands:", error);
@@ -15,11 +14,11 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { word, sequence, parentFamily, family, description } = body;
+    const { word, sequence, description } = body;
 
-    if (!word || !sequence || !parentFamily) {
+    if (!word || !sequence) {
       return NextResponse.json(
-        { error: "word, sequence, and parentFamily are required" },
+        { error: "word and sequence are required" },
         { status: 400 }
       );
     }
@@ -29,8 +28,6 @@ export async function POST(request: Request) {
       .values({
         word,
         sequence,
-        parentFamily,
-        family: family || null,
         description: description || null,
       })
       .returning();

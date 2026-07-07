@@ -28,15 +28,13 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { word, sequence, parentFamily, family, description } = body;
+    const { word, sequence, description } = body;
 
     const [updated] = await db
       .update(commands)
       .set({
         word,
         sequence,
-        parentFamily,
-        family: family || null,
         description: description || null,
         updatedAt: new Date(),
       })

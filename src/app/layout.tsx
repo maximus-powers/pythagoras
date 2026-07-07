@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Pythagoras",
-  description: "Dog training soundboard and analytics tracker",
+  description: "Dog training soundboard and vocabulary tracker",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

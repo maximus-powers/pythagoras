@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { dogProfile } from "@/lib/db/schema";
-import { getDevelopmentalInfo, formatAge } from "@/lib/training";
+import { getDevelopmentalInfo, formatAge } from "@/lib/training/age";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    // Support simulated date via query parameter
-    const { searchParams } = new URL(request.url);
-    const asOfParam = searchParams.get("asOf");
-    const asOf = asOfParam ? new Date(asOfParam) : new Date();
-    
     const profiles = await db.select().from(dogProfile).limit(1);
     
     if (profiles.length === 0) {
@@ -23,13 +18,12 @@ export async function GET(request: Request) {
     const birthDate = new Date(profile.birthDate);
     const arrivalDate = new Date(profile.arrivalDate);
     
-    const developmentalInfo = getDevelopmentalInfo(birthDate, arrivalDate, asOf);
+    const developmentalInfo = getDevelopmentalInfo(birthDate, arrivalDate);
     
     return NextResponse.json({
       ...profile,
       developmentalInfo,
       formattedAge: formatAge(developmentalInfo.ageWeeks),
-      simulatedDate: asOfParam ? asOf.toISOString() : null,
     });
   } catch (error) {
     console.error("Failed to fetch dog profile:", error);
